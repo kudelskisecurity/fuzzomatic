@@ -1,0 +1,15 @@
+#![no_main]
+
+extern crate libfuzzer_sys;
+
+use libfuzzer_sys::fuzz_target;
+use {{ crate_name }}{{ import_path }};
+
+fuzz_target!(|data: &[u8]| {
+    // fuzzed code goes here
+    if data.len() >= {{ array_length }} {
+        let mut fixed_data = [0u8; {{ array_length }}];
+        fixed_data.copy_from_slice(&data[..{{ array_length }}]);
+        {{ usage_path }}(&fixed_data);
+    }
+});

@@ -1,0 +1,22 @@
+#![no_main]
+
+extern crate libfuzzer_sys;
+
+use libfuzzer_sys::fuzz_target;
+use arbitrary::Arbitrary;
+use {{ crate_name }}{{ import_path }};
+
+#[derive(Arbitrary, Debug)]
+pub struct Arguments{% if struct_lifetime_needed %}<'a>{% endif %} {
+    {% for struct_type, _ in args %}
+        pub arg{{ loop.index }}: {{ struct_type }},{% endfor %}
+}
+
+fuzz_target!(|arguments: Arguments| {
+    // fuzzed code goes here
+    {{ usage_path }}(
+        {% for _, call_prefix in args %}
+            {{ call_prefix }}arguments.arg{{ loop.index }},
+        {% endfor %}
+    );
+});

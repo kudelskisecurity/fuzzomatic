@@ -1,0 +1,9 @@
+rules:
+  - id: fix_empty_functions
+    languages: [rust]
+    message: Get rid of empty functions
+    severity: WARNING
+    pattern-either:
+      - pattern: |
+          fn $TF(...) {}
+    fix: ""

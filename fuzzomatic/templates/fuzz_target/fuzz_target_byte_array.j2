@@ -1,0 +1,11 @@
+#![no_main]
+
+extern crate libfuzzer_sys;
+
+use libfuzzer_sys::fuzz_target;
+use {{ crate_name }}{{ import_path }};
+
+fuzz_target!(|data: &[u8]| {
+    // fuzzed code goes here
+    {{ usage_path }}(data);
+});

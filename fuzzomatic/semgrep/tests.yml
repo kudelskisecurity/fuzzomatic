@@ -1,0 +1,18 @@
+rules:
+  - id: test
+    languages: [rust]
+    message: Unit test detected
+    severity: WARNING
+    pattern-either:
+      - pattern: |
+          #[test]
+          fn $F(...) {...}
+      - patterns:
+          - pattern: |
+              #[test]
+              fn $F(...){...}
+          - pattern-inside: |
+              mod $M {
+                ...
+              }
+          

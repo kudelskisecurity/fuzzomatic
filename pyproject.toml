@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "fuzzomatic"
+version = "0.1.0"
+description = "Automatically fuzz Rust projects from scratch"
+authors = ["Nils Amiet <nils.amiet@kudelskisecurity.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+openai = "^0.28.0"
+jinja2 = "^3.1.2"
+pytest = "^7.4.2"
+coverage = "^7.3.1"
+requests = "^2.31.0"
+toml = "^0.10.2"
+pyyaml = "^6.0.1"
+
+[tool.poetry.scripts]
+fuzzomatic = "fuzzomatic.main:main"
+eval_results = "fuzzomatic.eval_results:main"
+batch_fuzzomatic = "fuzzomatic.batch_fuzzomatic:main"
+discovery = "fuzzomatic.discovery:main"
+oss_fuzz = "fuzzomatic.oss_fuzz:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/test_readme.py" = ["E501"]

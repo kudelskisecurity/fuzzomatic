@@ -1,0 +1,30 @@
+Given the following README file and an example fuzz target,
+give me an example of how to use the library's principal function,
+in the goal of writing a libfuzzer fuzz target in rust.
+Do not include any println!, eprintln! or dbg! statements in the code.
+Make sure to add any necessary include statements.
+
+Note that it's import to always produce fixed code that has the following example fuzz target structure:
+
+```
+#![no_main]
+
+// any other extern crate declarations go here
+extern crate libfuzzer_sys;
+
+use libfuzzer_sys::fuzz_target;
+// any other imports go here
+
+
+
+fuzz_target!(|data: &[u8]| {
+    // fuzzed code goes here
+
+});
+
+```
+
+
+README file:
+
+{{ readme }}

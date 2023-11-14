@@ -1,0 +1,31 @@
+Given the following example unit test of a Rust library,
+give me a libfuzzer fuzz target in rust that targets the same code as in the unit test.
+Do not include any println!, eprintln! or dbg! statements in the code.
+Do not make any call to assert! or assert_eq!.
+Make sure to add any necessary include statements.
+Make sure to use the `data` parameter and pass it to some of the library's functions.
+
+Note that it's import to always produce fixed code that has the following structure:
+
+```
+#![no_main]
+
+// any other extern crate declarations go here
+extern crate libfuzzer_sys;
+
+use libfuzzer_sys::fuzz_target;
+{% for use_stmt in use_statements %}
+    {{ use_stmt }}
+{% endfor %}
+
+
+fuzz_target!(|data: &[u8]| {
+    // fuzzed code goes here
+
+});
+
+```
+
+Example unit test:
+
+{{ code }}

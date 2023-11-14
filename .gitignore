@@ -1,0 +1,12 @@
+.idea
+.coverage
+__pycache__
+git
+*.pyc
+.terraform
+.terraform*
+terraform*
+settings.yml
+.pytest_cache
+.ruff_cache
+htmlcov

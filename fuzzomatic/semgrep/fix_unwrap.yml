@@ -1,0 +1,18 @@
+rules:
+  - id: fix_unwrap
+    languages: [rust]
+    message: Get rid of unwrap calls
+    severity: WARNING
+    pattern-either:
+      - patterns:
+          - pattern: |
+              let $X = $Y.unwrap();
+              ...$REST
+          - pattern-inside: |
+              fuzz_target() {
+              ...
+              }
+    fix: |
+      if let Ok($X) = $Y {
+        $REST;
+      }

@@ -1,0 +1,35 @@
+rules:
+  - id: test
+    languages: [rust]
+    message: Unit test with functions detected
+    severity: WARNING
+    pattern-either:
+      - pattern: |
+          #[test]
+          fn $TF(...) {... $F2(...)}
+          ...
+          fn $F2(...){...}
+      - pattern: |
+          fn $F2(...){...}
+          ...
+          #[test]
+          fn $TF(...) {... $F2(...)}
+      - patterns:
+          - pattern: |
+              fn $TF(...) {... $F2(...)}
+              ...
+              fn $F2(...){...}
+          - pattern-inside: |
+              mod $M {
+                ...
+              }
+      - patterns:
+          - pattern: |
+              fn $F2(...){...}
+              ...
+              fn $TF(...) {... $F2(...)}
+          - pattern-inside: |
+              mod $M {
+                ...
+              }
+          
