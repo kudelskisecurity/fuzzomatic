@@ -262,7 +262,7 @@ def expand_members(codebase_dir, members):
             expanded = expand_workspace_member(codebase_dir, member)
             expanded_members.extend(expanded)
         else:
-            expanded_members.append(member)
+            expanded_members.append(os.path.join(codebase_dir, member))
     return expanded_members
 
 
