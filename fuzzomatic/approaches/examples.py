@@ -7,7 +7,10 @@ from fuzzomatic.tools.constants import DEFAULT_TARGET_NAME
 
 
 def try_examples_approach(
-    codebase_dir, target_name=DEFAULT_TARGET_NAME, examples_dirname="examples", **_kwargs
+    codebase_dir,
+    target_name=DEFAULT_TARGET_NAME,
+    examples_dirname="examples",
+    **_kwargs,
 ):
     example_paths = detect_example_paths(codebase_dir, examples_dirname)
 

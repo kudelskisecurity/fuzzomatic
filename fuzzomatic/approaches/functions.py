@@ -15,8 +15,28 @@ def try_functions_approach(codebase_dir, target_name=DEFAULT_TARGET_NAME, **_kwa
         print("Failed to detect functions")
         return False, None
 
-    interesting_function_names = ["parse", "load", "read", "str", "eval"]
+    ordered_functions = score_functions(functions)
 
+    print(f"{len(ordered_functions)} functions detected")
+    print("Detected target functions:")
+    for f in ordered_functions:
+        print(f)
+
+    max_functions = 5  # try max N functions
+    for f in ordered_functions[:max_functions]:
+        print("Attempting function:")
+        print(f)
+
+        success, fuzz_target_path = try_function(f, codebase_dir, target_name)
+
+        if success:
+            return True, fuzz_target_path
+
+    return False, None
+
+
+def score_functions(functions):
+    interesting_function_names = ["parse", "load", "read", "str", "eval"]
     # order functions by most interesting first
     ordered_functions = []
     for f in functions:
@@ -77,23 +97,7 @@ def try_functions_approach(codebase_dir, target_name=DEFAULT_TARGET_NAME, **_kwa
         augmented_function = [*f, priority]
         ordered_functions.append(augmented_function)
     ordered_functions = sorted(ordered_functions, key=lambda x: x[3], reverse=True)
-
-    print(f"{len(ordered_functions)} functions detected")
-    print("Detected target functions:")
-    for f in ordered_functions:
-        print(f)
-
-    max_functions = 5  # try max N functions
-    for f in ordered_functions[:max_functions]:
-        print("Attempting function:")
-        print(f)
-
-        success, fuzz_target_path = try_function(f, codebase_dir, target_name)
-
-        if success:
-            return True, fuzz_target_path
-
-    return False, None
+    return ordered_functions
 
 
 def try_function(f, codebase_dir, target_name):

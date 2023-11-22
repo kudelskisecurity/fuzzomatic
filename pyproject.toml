@@ -21,6 +21,7 @@ eval_results = "fuzzomatic.eval_results:main"
 batch_fuzzomatic = "fuzzomatic.batch_fuzzomatic:main"
 discovery = "fuzzomatic.discovery:main"
 oss_fuzz = "fuzzomatic.oss_fuzz:main"
+docparse = "fuzzomatic.docparse:main"
 
 [build-system]
 requires = ["poetry-core"]
