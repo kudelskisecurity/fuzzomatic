@@ -479,14 +479,22 @@ def read_codebase_results(codebase_dir):
     return target_results
 
 
-def autofuzz_subdirs(codebase_dir, target_name, approaches=[]):
-    files = glob.glob(f"{codebase_dir}/*")
+def autofuzz_workspace(codebase_dir, target_name, approaches=[]):
+    # identify workspace members
+    members = fuzzomatic.tools.utils.read_workspace_members(codebase_dir)
+
+    print("About to autofuzz workspace members:")
+    for m in members:
+        print(m)
+    print()
+
+    # run autofuzz on each workspace member
     tried_approaches = []
-    for f in files:
+    for f in members:
         # check that the subdir is not fuzzed
         is_fuzzed = discovery.is_project_already_fuzzed(f)
         if os.path.isdir(f) and not is_fuzzed:
-            print(f"Retrying with subdir: {f}")
+            print(f"Retrying with workspace member: {f}")
             try:
                 fuzz_target, tried_approaches = autofuzz_codebase(
                     f,
@@ -501,7 +509,7 @@ def autofuzz_subdirs(codebase_dir, target_name, approaches=[]):
             if fuzz_target is not None:
                 return fuzz_target, tried_approaches
         else:
-            print(f"Skipping subdir: {f}")
+            print(f"Skipping workspace member: {f}")
 
     return None, tried_approaches
 
@@ -532,7 +540,7 @@ def autofuzz_codebase(
         # check whether it's a virtual manifest
         is_virtual_manifest = check_virtual_manifest(codebase_dir)
         if is_virtual_manifest:
-            return autofuzz_subdirs(
+            return autofuzz_workspace(
                 codebase_dir, target_name=target_name, approaches=approaches
             )
         else:

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
+import glob
 import json
 import os
 import subprocess
 
 import toml
+
 from fuzzomatic.tools.semgrep import run_semgrep_rule_file
 
 
@@ -216,6 +218,52 @@ def init_cargo_fuzz(codebase_dir, target_name):
         pass
 
     return True
+
+
+def expand_workspace_member(codebase_dir, member):
+    members = []
+    path = os.path.join(codebase_dir, member)
+    print(f"{path=}")
+    for x in glob.glob(path):
+        if os.path.isdir(x):
+            members.append(x)
+    return members
+
+
+def read_workspace_members(codebase_dir):
+    cargo_file = os.path.join(codebase_dir, "Cargo.toml")
+    members = []
+    if os.path.exists(cargo_file):
+        contents = load_toml(cargo_file)
+        if "workspace" in contents:
+            workspace = contents["workspace"]
+            if "members" in workspace:
+                members = workspace["members"]
+                exclude = []
+                if "exclude" in workspace:
+                    exclude = workspace["exclude"]
+
+    members = expand_members(codebase_dir, members)
+    exclude = expand_members(codebase_dir, exclude)
+
+    # remove excluded members
+    final_members = set(members)
+    final_exclude = set(exclude)
+    final = final_members - final_exclude
+    final = sorted(list(final))
+
+    return final
+
+
+def expand_members(codebase_dir, members):
+    expanded_members = []
+    for member in members:
+        if "*" in member:
+            expanded = expand_workspace_member(codebase_dir, member)
+            expanded_members.extend(expanded)
+        else:
+            expanded_members.append(member)
+    return expanded_members
 
 
 def check_virtual_manifest(codebase_dir):
