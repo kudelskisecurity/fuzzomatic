@@ -385,8 +385,11 @@ def add_parent_dependencies(codebase_dir, root_codebase_dir):
             if "workspace" in v and v["workspace"] == True:
                 # update using workspace Cargo.toml
                 wdep = wdeps[k]
-                parent_dependencies[k].update(wdep)
-                del parent_dependencies[k]["workspace"]
+                if type(wdep) == dict:
+                    parent_dependencies[k].update(wdep)
+                    del parent_dependencies[k]["workspace"]
+                else:
+                    parent_dependencies[k] = wdep
 
                 # fix path if needed
                 if "path" in wdep:
