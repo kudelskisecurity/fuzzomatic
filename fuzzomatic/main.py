@@ -490,6 +490,8 @@ def autofuzz_workspace(codebase_dir, target_name, approaches=[]):
 
     # run autofuzz on each workspace member
     tried_approaches = []
+    build_failure_count = 0
+
     for f in members:
         # check that the subdir is not fuzzed
         is_fuzzed = discovery.is_project_already_fuzzed(f)
@@ -503,7 +505,14 @@ def autofuzz_workspace(codebase_dir, target_name, approaches=[]):
                     approaches=approaches,
                     root_codebase_dir=codebase_dir,
                 )
-            except SystemExit:
+            except SystemExit as e:
+                if e.code == EXIT_PROJECT_DOES_NOT_BUILD:
+                    build_failure_count += 1
+
+                    if build_failure_count == len(members):
+                        # all members failed to build, consider this a build failure
+                        raise
+
                 print(f"Failed to process subdir: {f}")
                 print("Moving on")
                 fuzz_target = None
