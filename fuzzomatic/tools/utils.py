@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import copy
 import glob
 import json
 import os
@@ -384,12 +385,16 @@ def add_parent_dependencies(codebase_dir, root_codebase_dir):
         for k, v in parent_dependencies.items():
             if "workspace" in v and v["workspace"] == True:
                 # update using workspace Cargo.toml
-                wdep = wdeps[k]
+                wdep = copy.deepcopy(wdeps[k])
+
                 if type(wdep) == dict:
-                    parent_dependencies[k].update(wdep)
-                    del parent_dependencies[k]["workspace"]
+                    wdep.update(parent_dependencies[k])
                 else:
-                    parent_dependencies[k] = wdep
+                    wdep = {"version": wdep}
+                    wdep.update(parent_dependencies[k])
+
+                parent_dependencies[k] = wdep
+                del parent_dependencies[k]["workspace"]
 
                 # fix path if needed
                 if "path" in wdep:
