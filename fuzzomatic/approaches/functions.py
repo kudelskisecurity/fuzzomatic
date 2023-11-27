@@ -72,6 +72,9 @@ def score_functions(functions):
                 priority = 100
             elif is_name_interesting:
                 priority = 100
+
+                if args[0] == "self":
+                    priority = 15
             elif args[0] == "self":
                 # functions with "self" as first argument
                 priority = -50
