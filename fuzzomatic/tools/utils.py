@@ -387,10 +387,10 @@ def add_parent_dependencies(codebase_dir, root_codebase_dir):
                 # update using workspace Cargo.toml
                 wdep = copy.deepcopy(wdeps[k])
 
-                if type(wdep) == dict:
+                if type(wdep) == str:
+                    wdep = {"version": wdep}
                     wdep.update(parent_dependencies[k])
                 else:
-                    wdep = {"version": wdep}
                     wdep.update(parent_dependencies[k])
 
                 parent_dependencies[k] = wdep
