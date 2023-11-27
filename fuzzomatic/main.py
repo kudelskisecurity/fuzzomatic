@@ -501,6 +501,7 @@ def autofuzz_workspace(codebase_dir, target_name, approaches=[]):
                     target_name=target_name,
                     virtual_manifest=True,
                     approaches=approaches,
+                    root_codebase_dir=codebase_dir,
                 )
             except SystemExit:
                 print(f"Failed to process subdir: {f}")
@@ -527,7 +528,11 @@ def is_project_building_by_default(codebase_dir):
 
 
 def autofuzz_codebase(
-    codebase_dir, target_name=DEFAULT_TARGET_NAME, virtual_manifest=False, approaches=[]
+    codebase_dir,
+    target_name=DEFAULT_TARGET_NAME,
+    virtual_manifest=False,
+    approaches=[],
+    root_codebase_dir=None,
 ):
     tried_approaches = []
 
@@ -548,7 +553,7 @@ def autofuzz_codebase(
             raise SystemExit(EXIT_NOT_A_CARGO_PROJECT)
 
     # add dependencies from the parent Cargo.toml file to the fuzz Cargo project
-    fuzzomatic.tools.utils.add_parent_dependencies(codebase_dir)
+    fuzzomatic.tools.utils.add_parent_dependencies(codebase_dir, root_codebase_dir)
     # also add the arbitrary crate for target functions with multiple arguments
     utils.add_fuzz_dependency(codebase_dir, "arbitrary@1", features=["derive"])
 

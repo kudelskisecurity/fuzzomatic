@@ -339,11 +339,13 @@ def write_toml(file_path, contents):
         fout.write(toml.dumps(contents))
 
 
-def add_parent_dependencies(codebase_dir):
+def add_parent_dependencies(codebase_dir, root_codebase_dir):
     parent_cargo_path = os.path.join(codebase_dir, "Cargo.toml")
-    grandparent_cargo_path = os.path.join(
-        os.path.abspath(os.path.join(codebase_dir, os.path.pardir)), "Cargo.toml"
-    )
+
+    workspace_cargo_path = None
+    if root_codebase_dir is not None:
+        workspace_cargo_path = os.path.join(root_codebase_dir, "Cargo.toml")
+
     fuzz_cargo_path = os.path.join(codebase_dir, "fuzz", "Cargo.toml")
 
     parent_dependencies = {}
@@ -362,13 +364,14 @@ def add_parent_dependencies(codebase_dir):
                 parent_dependencies.update(dev_dependencies)
 
             # check if grandparent workspace.dependencies exist
-            if os.path.exists(grandparent_cargo_path):
-                grandparent_cargo = load_toml(grandparent_cargo_path)
+            if workspace_cargo_path is not None and os.path.exists(
+                workspace_cargo_path
+            ):
+                grandparent_cargo = load_toml(workspace_cargo_path)
                 if "workspace" in grandparent_cargo:
                     workspace = grandparent_cargo["workspace"]
                     if "dependencies" in workspace:
                         wdeps = workspace["dependencies"]
-                        parent_dependencies.update(wdeps)
 
         # fix parent dependencies relative paths
         for k, v in parent_dependencies.items():
@@ -377,6 +380,24 @@ def add_parent_dependencies(codebase_dir):
                 path = v["path"]
                 path = f"../{path}"
                 v["path"] = path
+
+        for k, v in parent_dependencies.items():
+            if "workspace" in v and v["workspace"] == True:
+                # update using workspace Cargo.toml
+                wdep = wdeps[k]
+                parent_dependencies[k].update(wdep)
+                del parent_dependencies[k]["workspace"]
+
+                # fix path if needed
+                if "path" in wdep:
+                    # fix workspace dependency path relative to fuzz Cargo.toml
+                    wpath = wdep["path"]
+                    rel_path = os.path.relpath(root_codebase_dir, codebase_dir)
+                    fixed_wpath = os.path.join(rel_path, os.path.pardir, wpath)
+                    parent_dependencies[k]["path"] = fixed_wpath
+
+    else:
+        print("Parent Cargo.toml does not exist")
 
     # add dependencies to fuzz Cargo.toml
     empty_dependencies = len(parent_dependencies) == 0
