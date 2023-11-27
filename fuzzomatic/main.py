@@ -576,7 +576,8 @@ def autofuzz_codebase(
 
         # attempt approach
         success, fuzz_target_path = approach_function(
-            codebase_dir, target_name=target_name, virtual_manifest=virtual_manifest
+            codebase_dir, target_name=target_name, virtual_manifest=virtual_manifest,
+            root_codebase_dir=root_codebase_dir,
         )
 
         outcome = success

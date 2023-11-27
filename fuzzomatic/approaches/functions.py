@@ -8,8 +8,8 @@ from fuzzomatic.tools.constants import DEFAULT_TARGET_NAME
 from fuzzomatic.tools.utils import write_fuzz_target, build_target
 
 
-def try_functions_approach(codebase_dir, target_name=DEFAULT_TARGET_NAME, **_kwargs):
-    functions = find_target_functions_via_cargo_doc(codebase_dir)
+def try_functions_approach(codebase_dir, target_name=DEFAULT_TARGET_NAME, root_codebase_dir=None, **_kwargs):
+    functions = find_target_functions_via_cargo_doc(codebase_dir, root_codebase_dir=root_codebase_dir)
 
     if functions is None:
         print("Failed to detect functions")
@@ -19,10 +19,16 @@ def try_functions_approach(codebase_dir, target_name=DEFAULT_TARGET_NAME, **_kwa
 
     print(f"{len(ordered_functions)} functions detected")
     print("Detected target functions:")
+    all_negative_scores = True
     for f in ordered_functions:
         print(f)
+        score = f[3]
+        if score >= 0:
+            all_negative_scores = False
 
     max_functions = 5  # try max N functions
+    if all_negative_scores:
+        max_functions = 2
     for f in ordered_functions[:max_functions]:
         print("Attempting function:")
         print(f)
@@ -49,10 +55,6 @@ def score_functions(functions):
             if pattern in function_name:
                 is_name_interesting = True
 
-        if len(args) > 0 and args[0] == "self":
-            # skip functions with "self" as first argument
-            continue
-
         if len(args) == 1:
             arg_type = args[0]
 
@@ -70,6 +72,9 @@ def score_functions(functions):
                 priority = 100
             elif is_name_interesting:
                 priority = 100
+            elif args[0] == "self":
+                # functions with "self" as first argument
+                priority = -50
             else:
                 priority = 50
         elif len(args) > 1:
@@ -84,11 +89,15 @@ def score_functions(functions):
                 if any(type(arg) == tuple and arg[0] == "&array" for arg in args):
                     priority = 75
             else:
-                # skip functions with multiple arguments where not all types are known
-                continue
+                # functions with multiple arguments where not all types are known
+                priority = -10
+
+            if args[0] == "self":
+                # functions with "self" as first argument
+                priority = -50
         else:
             # skip functions with no arguments
-            continue
+            priority = -100
 
         # give low priority to functions that are likely to load something by filename
         if "file" in function_name and arg_type == "&str":
@@ -228,9 +237,10 @@ def try_with_template(
     return False, None
 
 
-def find_target_functions_via_cargo_doc(codebase_dir):
-    json_path = generate_cargo_doc_json(codebase_dir)
+def find_target_functions_via_cargo_doc(codebase_dir, root_codebase_dir=None):
+    json_path = generate_cargo_doc_json(codebase_dir, root_codebase_dir=root_codebase_dir)
     if json_path is not None:
+        print(f"Using cargo doc file: {json_path}")
         functions = parse_cargo_doc_json(json_path)
         return functions
     else:

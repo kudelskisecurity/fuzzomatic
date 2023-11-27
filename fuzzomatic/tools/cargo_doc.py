@@ -4,6 +4,8 @@ import json
 import os
 import subprocess
 
+from fuzzomatic.tools.utils import detect_crate_name
+
 
 def parse_item(index, it, path):
     functions = []
@@ -149,7 +151,7 @@ def parse_cargo_doc_json(path):
     return functions
 
 
-def generate_cargo_doc_json(codebase_dir):
+def generate_cargo_doc_json(codebase_dir, root_codebase_dir=None):
     cmd = [
         "cargo",
         "+nightly",
@@ -168,9 +170,17 @@ def generate_cargo_doc_json(codebase_dir):
 
     try:
         subprocess.check_call(cmd, cwd=codebase_dir)
-        target = os.path.join(codebase_dir, "target", "doc")
-        for f in glob.glob(f"{target}/*.json"):
-            json_file_path = f
+        target_root = codebase_dir
+        if root_codebase_dir is not None:
+            target_root = root_codebase_dir
+        target = os.path.join(target_root, "target", "doc")
+        crate_name = detect_crate_name(codebase_dir)
+        json_file_path = os.path.join(target, f"{crate_name}.json")
+        if os.path.exists(json_file_path):
+            return json_file_path
+        else:
+            for f in glob.glob(f"{target}/*.json"):
+                json_file_path = f
     except subprocess.CalledProcessError:
         print("Error: failed to generate cargo doc json")
 
