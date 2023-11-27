@@ -224,7 +224,6 @@ def init_cargo_fuzz(codebase_dir, target_name):
 def expand_workspace_member(codebase_dir, member):
     members = []
     path = os.path.join(codebase_dir, member)
-    print(f"{path=}")
     for x in glob.glob(path):
         if os.path.isdir(x):
             members.append(x)
@@ -265,6 +264,21 @@ def expand_members(codebase_dir, members):
         else:
             expanded_members.append(os.path.join(codebase_dir, member))
     return expanded_members
+
+
+def check_has_workspace_members(codebase_dir):
+    cargo_file = os.path.join(codebase_dir, "Cargo.toml")
+    if os.path.exists(cargo_file):
+        with open(cargo_file) as f:
+            workspace_found = False
+            for line in f:
+                line = line.strip()
+                if line == "[workspace]":
+                    workspace_found = True
+        has_members = workspace_found
+        return has_members
+
+    return False
 
 
 def check_virtual_manifest(codebase_dir):

@@ -34,6 +34,7 @@ from fuzzomatic.tools.utils import (
     git_clone,
     init_cargo_fuzz,
     check_virtual_manifest,
+    check_has_workspace_members,
     detect_git_url,
 )
 
@@ -544,22 +545,27 @@ def autofuzz_codebase(
     root_codebase_dir=None,
 ):
     tried_approaches = []
-
+    # cargo fuzz init
     success = init_cargo_fuzz(codebase_dir, target_name)
-    if success:
-        check_project_builds_or_exit(codebase_dir)
-    else:
-        print("Failed to init cargo fuzz")
 
-        # check whether it's a virtual manifest
-        is_virtual_manifest = check_virtual_manifest(codebase_dir)
-        if is_virtual_manifest:
-            return autofuzz_workspace(
-                codebase_dir, target_name=target_name, approaches=approaches
-            )
-        else:
-            print("Aborting... could not cargo fuzz init, and not a virtual manifest")
-            raise SystemExit(EXIT_NOT_A_CARGO_PROJECT)
+    # check whether it's a virtual manifest
+    is_virtual_manifest = check_virtual_manifest(codebase_dir)
+    is_workspace = check_has_workspace_members(codebase_dir)
+
+    if not success and not is_virtual_manifest:
+        print("Aborting... could not cargo fuzz init, and not a virtual manifest")
+        raise SystemExit(EXIT_NOT_A_CARGO_PROJECT)
+
+    if success and not is_workspace:
+        check_project_builds_or_exit(codebase_dir)
+
+    if is_workspace:
+        fuzz_target_path, tried_approaches = autofuzz_workspace(
+            codebase_dir, target_name=target_name, approaches=approaches
+        )
+
+        if fuzz_target_path is not None:
+            return fuzz_target_path, tried_approaches
 
     # add dependencies from the parent Cargo.toml file to the fuzz Cargo project
     fuzzomatic.tools.utils.add_parent_dependencies(codebase_dir, root_codebase_dir)
@@ -576,7 +582,9 @@ def autofuzz_codebase(
 
         # attempt approach
         success, fuzz_target_path = approach_function(
-            codebase_dir, target_name=target_name, virtual_manifest=virtual_manifest,
+            codebase_dir,
+            target_name=target_name,
+            virtual_manifest=virtual_manifest,
             root_codebase_dir=root_codebase_dir,
         )
 

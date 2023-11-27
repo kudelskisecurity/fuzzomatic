@@ -8,8 +8,12 @@ from fuzzomatic.tools.constants import DEFAULT_TARGET_NAME
 from fuzzomatic.tools.utils import write_fuzz_target, build_target
 
 
-def try_functions_approach(codebase_dir, target_name=DEFAULT_TARGET_NAME, root_codebase_dir=None, **_kwargs):
-    functions = find_target_functions_via_cargo_doc(codebase_dir, root_codebase_dir=root_codebase_dir)
+def try_functions_approach(
+    codebase_dir, target_name=DEFAULT_TARGET_NAME, root_codebase_dir=None, **_kwargs
+):
+    functions = find_target_functions_via_cargo_doc(
+        codebase_dir, root_codebase_dir=root_codebase_dir
+    )
 
     if functions is None:
         print("Failed to detect functions")
@@ -241,7 +245,9 @@ def try_with_template(
 
 
 def find_target_functions_via_cargo_doc(codebase_dir, root_codebase_dir=None):
-    json_path = generate_cargo_doc_json(codebase_dir, root_codebase_dir=root_codebase_dir)
+    json_path = generate_cargo_doc_json(
+        codebase_dir, root_codebase_dir=root_codebase_dir
+    )
     if json_path is not None:
         print(f"Using cargo doc file: {json_path}")
         functions = parse_cargo_doc_json(json_path)
