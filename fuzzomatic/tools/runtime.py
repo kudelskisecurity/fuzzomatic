@@ -80,10 +80,15 @@ def save_runtime_results(codebase_dir, useful, bug_found, error):
 
 
 def evaluate_target(
-    codebase_dir, max_total_time_seconds=DEFAULT_MAX_TOTAL_TIME_SECONDS
+    codebase_dir,
+    fuzz_target_path,
+    max_total_time_seconds=DEFAULT_MAX_TOTAL_TIME_SECONDS,
 ):
+    fuzz_project_dir = os.path.realpath(
+        os.path.join(os.path.dirname(fuzz_target_path), os.path.pardir)
+    )
     success, error = run_fuzz_target(
-        codebase_dir, max_total_time_seconds=max_total_time_seconds
+        fuzz_project_dir, max_total_time_seconds=max_total_time_seconds
     )
     cov_changes, first_cov, last_cov = is_cov_changing(error)
     print(f"Cov changing: {cov_changes}")

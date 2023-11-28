@@ -244,7 +244,7 @@ def generate_and_build(codebase_dir, git_url, approaches, force=False):
 
         end_time = datetime.datetime.utcnow()
         duration = end_time - start_time
-        return False, duration
+        return False, duration, fuzz_target_path
 
     if fuzz_target_path is not None:
         print("Autofuzz successful!")
@@ -262,7 +262,7 @@ def generate_and_build(codebase_dir, git_url, approaches, force=False):
         )
         end_time = datetime.datetime.utcnow()
         duration = end_time - start_time
-        return True, duration
+        return True, duration, fuzz_target_path
     else:
         print("Failed to automatically generate a working fuzz target")
         print("No heuristic worked")
@@ -276,7 +276,7 @@ def generate_and_build(codebase_dir, git_url, approaches, force=False):
         )
         end_time = datetime.datetime.utcnow()
         duration = end_time - start_time
-        return False, duration
+        return False, duration, fuzz_target_path
 
 
 def ensure_dependencies_available():
@@ -408,12 +408,14 @@ def backtrack(args, codebase_dir, git_url):
 
         # re-run the build step, starting with the approaches not yet tried
         approaches = get_approaches(untried_approaches)
-        generate_and_build(codebase_dir, git_url, approaches, force=True)
+        _, _, fuzz_target_path = generate_and_build(
+            codebase_dir, git_url, approaches, force=True
+        )
 
         # re-run the runtime step
         cleanup_corpus(codebase_dir)
         is_fuzz_target_useful, bug_found, error = evaluate_target(
-            codebase_dir, max_total_time_seconds=10
+            codebase_dir, fuzz_target_path, max_total_time_seconds=10
         )
         print(f"{is_fuzz_target_useful=}")
         print(f"{bug_found=}")
@@ -450,7 +452,7 @@ def build_and_run_once(args, git_url):
         print("Building target")
         # run build step once
         approaches = get_approaches(args.approaches)
-        build_successful, duration = generate_and_build(
+        build_successful, duration, fuzz_target_path = generate_and_build(
             args.codebase_dir, git_url, approaches, force=args.force
         )
         print(f"Outcome: {build_successful}")
@@ -465,7 +467,7 @@ def build_and_run_once(args, git_url):
         cleanup_corpus(args.codebase_dir)
 
         is_fuzz_target_useful, bug_found, error = evaluate_target(
-            args.codebase_dir, max_total_time_seconds=10
+            args.codebase_dir, fuzz_target_path, max_total_time_seconds=10
         )
         print(f"{is_fuzz_target_useful=}")
         print(f"{bug_found=}")
