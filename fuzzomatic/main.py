@@ -569,38 +569,39 @@ def autofuzz_codebase(
         if fuzz_target_path is not None:
             return fuzz_target_path, tried_approaches
 
-    # add dependencies from the parent Cargo.toml file to the fuzz Cargo project
-    fuzzomatic.tools.utils.add_parent_dependencies(codebase_dir, root_codebase_dir)
-    # also add the arbitrary crate for target functions with multiple arguments
-    utils.add_fuzz_dependency(codebase_dir, "arbitrary@1", features=["derive"])
+    if success:
+        # add dependencies from the parent Cargo.toml file to the fuzz Cargo project
+        fuzzomatic.tools.utils.add_parent_dependencies(codebase_dir, root_codebase_dir)
+        # also add the arbitrary crate for target functions with multiple arguments
+        utils.add_fuzz_dependency(codebase_dir, "arbitrary@1", features=["derive"])
 
-    for approach_name, approach_function in approaches:
-        print("=" * 40)
-        print(f"ATTEMPTING APPROACH: {approach_name}")
-        print("=" * 40)
+        for approach_name, approach_function in approaches:
+            print("=" * 40)
+            print(f"ATTEMPTING APPROACH: {approach_name}")
+            print("=" * 40)
 
-        # reset counts per approach
-        reset_ask_llm_counts()
+            # reset counts per approach
+            reset_ask_llm_counts()
 
-        # attempt approach
-        success, fuzz_target_path = approach_function(
-            codebase_dir,
-            target_name=target_name,
-            virtual_manifest=virtual_manifest,
-            root_codebase_dir=root_codebase_dir,
-        )
+            # attempt approach
+            success, fuzz_target_path = approach_function(
+                codebase_dir,
+                target_name=target_name,
+                virtual_manifest=virtual_manifest,
+                root_codebase_dir=root_codebase_dir,
+            )
 
-        outcome = success
+            outcome = success
 
-        usage = {
-            "prompt_tokens": ask_llm.prompt_tokens,
-            "completion_tokens": ask_llm.completion_tokens,
-            "total_tokens": ask_llm.total_tokens,
-            "llm_calls": ask_llm.counter,
-        }
-        tried_approaches.append((approach_name, outcome, usage))
-        if success:
-            return fuzz_target_path, tried_approaches
+            usage = {
+                "prompt_tokens": ask_llm.prompt_tokens,
+                "completion_tokens": ask_llm.completion_tokens,
+                "total_tokens": ask_llm.total_tokens,
+                "llm_calls": ask_llm.counter,
+            }
+            tried_approaches.append((approach_name, outcome, usage))
+            if success:
+                return fuzz_target_path, tried_approaches
 
     return None, tried_approaches
 
