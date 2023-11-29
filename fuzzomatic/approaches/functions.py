@@ -22,17 +22,27 @@ def try_functions_approach(
     ordered_functions = score_functions(functions)
 
     print(f"{len(ordered_functions)} functions detected")
+    all_negative_score_functions = True
     print("Detected target functions:")
     for f in ordered_functions:
         print(f)
+        score = f[3]
+        if score > 0:
+            all_negative_score_functions = False
 
     max_functions = 8  # try max N functions
     max_negative_score_functions = 2
     negative_score_functions = 0
     for f in ordered_functions[:max_functions]:
+        score = f[3]
+
+        if score <= 0 and not all_negative_score_functions:
+            # skip functions with a negative score
+            # unless this is all that is available
+            continue
+
         print("Attempting function:")
         print(f)
-        score = f[3]
 
         if score <= 0:
             negative_score_functions += 1
@@ -72,14 +82,14 @@ def score_functions(functions):
             elif arg_type == "bool":
                 priority = 0
             elif arg_type == "unknown":
-                priority = 20
+                priority = -10
             elif type(arg_type) == tuple and arg_type[0] == "&array":
                 priority = 100
             elif is_name_interesting:
                 priority = 100
 
                 if args[0] == "self":
-                    priority = 15
+                    priority = -15
             elif args[0] == "self":
                 # functions with "self" as first argument
                 priority = -50

@@ -271,13 +271,9 @@ def process_codebase(args, git_url):
 
             # print current stats
             building, useful, bug_found = current_stats(generated_fuzz_targets)
+            print()
             print("Generated fuzz targets so far for this codebase:")
-            print("*" * 50)
-            print(f"{args.codebase_dir=}")
-            print(f"{building=}")
-            print(f"{useful=}")
-            print(f"{bug_found=}")
-            print("*" * 50)
+            print_current_stats(args, bug_found, building, useful)
 
             # check stop conditions
             if args.stop_on == "building":
@@ -331,6 +327,20 @@ def process_codebase(args, git_url):
         duration,
         outcome_reason,
     )
+    building, useful, bug_found = current_stats(generated_fuzz_targets)
+    print()
+    print("Final fuzz targets generated for this codebase:")
+    print_current_stats(args, bug_found, building, useful)
+
+
+def print_current_stats(args, bug_found, building, useful):
+    print("*" * 50)
+    print(f"{args.codebase_dir=}")
+    print(f"{building=}")
+    print(f"{useful=}")
+    print(f"{bug_found=}")
+    print("*" * 50)
+    print()
 
 
 def read_codebase_results(codebase_dir):
@@ -352,7 +362,6 @@ def autofuzz_workspace(codebase_dir, target_name, approaches=[]):
     print()
 
     # run autofuzz on each workspace member
-    tried_approaches = []
     build_failure_count = 0
 
     for f in members:
@@ -360,31 +369,26 @@ def autofuzz_workspace(codebase_dir, target_name, approaches=[]):
         is_fuzzed = discovery.is_project_already_fuzzed(f)
         if os.path.isdir(f) and not is_fuzzed:
             print(f"Retrying with workspace member: {f}")
-            try:
-                fuzz_target, tried_approaches = autofuzz_codebase(
-                    f,
-                    target_name=target_name,
-                    virtual_manifest=True,
-                    approaches=approaches,
-                    root_codebase_dir=codebase_dir,
-                )
-            except SystemExit as e:
-                if e.code == EXIT_PROJECT_DOES_NOT_BUILD:
+            generator = autofuzz_codebase(
+                f,
+                target_name=target_name,
+                virtual_manifest=True,
+                approaches=approaches,
+                root_codebase_dir=codebase_dir,
+            )
+
+            for result in generator:
+                result_type, contents = result
+                if result_type == "message" and contents == EXIT_PROJECT_DOES_NOT_BUILD:
                     build_failure_count += 1
 
                     if build_failure_count == len(members):
                         # all members failed to build, consider this a build failure
-                        raise
+                        yield "message", EXIT_PROJECT_DOES_NOT_BUILD
 
-                print(f"Failed to process subdir: {f}")
-                print("Moving on")
-                fuzz_target = None
-            if fuzz_target is not None:
-                return fuzz_target, tried_approaches
-        else:
-            print(f"Skipping workspace member: {f}")
-
-    return None, tried_approaches
+                    continue
+                else:
+                    yield result
 
 
 def is_project_building_by_default(codebase_dir):
