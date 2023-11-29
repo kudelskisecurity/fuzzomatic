@@ -207,25 +207,12 @@ def main():
     successes = 0
     failures = 0
     total_outcomes = 0
-    outcomes = []
     outcome_reasons = []
-    successful_approaches = []
-    successful_approaches_no_none = []
     durations = []
     success_durations = []
-    total_llm_calls = []
     fuzz_targets = []
-    usefuls = []
-    bugs_found = []
-    total_tokens_counts = []
     approach_prices = {}
-    projects_with_total_tokens = []
     projects_with_durations = []
-    projects_with_price_estimation = []
-    projects_with_price_estimation_all = []
-    projects_with_price_estimation_successes = []
-    projects_with_most_costly_approach = []
-    total_estimated_price = 0
 
     useful_targets = []
     bug_found_targets = []
@@ -241,143 +228,92 @@ def main():
         "Project",
         "Build",
         "Reason",
-        "Successful approach",
         "Useful",
         "Bug found",
+        "Successful approaches",
     ]
-    spacings = [30, 16, 25, 25, 9, 9]
+    spacings = [30, 16, 25, 9, 12, 25]
     print_aligned(*titles, spacings=spacings)
     separators = ["-" * max(3, sp - 3) for sp in spacings]
     print_aligned(*separators, spacings=spacings)
 
     # print rows
     for r in results:
+        total_outcomes += 1
         name = r["name"]
-        outcome = r["outcome"]
-        success = "SUCCESS" if outcome is True else "[*FAILURE*]"
         outcome_reason = r["outcome_reason"]
-        successful_approach = r["successful_approach"]
-        useful = None
-        bug_found = None
-        if "runtime_useful" in r:
-            useful = r["runtime_useful"]
-        if "runtime_bug_found" in r:
-            bug_found = r["runtime_bug_found"]
+        success = "SUCCESS" if outcome_reason == "success" else "[*FAILURE*]"
+        generated_fuzz_targets = r["generated_fuzz_targets"]
+        successful_approaches = set()
+        bugs_found = 0
+        usefuls = 0
+        for fuzz_target in generated_fuzz_targets:
+            successful_approach = fuzz_target["successful_approach"]
+            successful_approaches.add(successful_approach)
+
+            is_useful = fuzz_target["is_useful"]
+            bug_found = fuzz_target["bug_found"]
+
+            if bug_found:
+                bugs_found += 1
+            if is_useful:
+                usefuls += 1
+
         print_aligned(
             name,
             success,
             outcome_reason,
-            successful_approach,
-            useful,
-            bug_found,
+            usefuls,
+            bugs_found,
+            successful_approaches,
             spacings=spacings,
         )
 
     print("")
 
+    successful_approaches = []
+    usefuls = []
+    bugs_found = []
     for r in results:
         name = r["name"]
         codebase_dir = r["codebase_dir"]
-        # outcome
-        outcome = r["outcome"]
-        outcomes.append(outcome)
-        total_outcomes += 1
-        if outcome is True:
-            successes += 1
-        else:
-            failures += 1
 
         # outcome reason
         outcome_reason = r["outcome_reason"]
         outcome_reasons.append(outcome_reason)
-        if outcome is not True and outcome_reason == "no_approach_worked":
+        if outcome_reason == "no_approach_worked":
             no_approach_worked_targets.append(codebase_dir)
 
         # successful approaches
-        successful_approach = r["successful_approach"]
-        successful_approaches.append(successful_approach)
-        if outcome is True:
-            successful_approaches_no_none.append(successful_approach)
+        if outcome_reason == "success":
+            successes += 1
 
         # duration
         duration_seconds = round(float(r["duration_seconds"]), 5)
         durations.append(duration_seconds)
-        if outcome is True:
+        if outcome_reason == "success":
             success_durations.append(duration_seconds)
         projects_with_durations.append((name, duration_seconds))
 
-        # llm calls
-        total_llm_calls.append(r["total_llm_calls"])
-
-        # total tokens
-        total_tokens = r["total_tokens"]
-        total_tokens_counts.append(total_tokens)
-        projects_with_total_tokens.append((name, total_tokens))
-
-        tried_approaches = r["tried_approaches"]
-        project_total_price = 0
-        approach_with_highest_cost = None
-        max_cost = 0
-        for approach_name, outcome, usage in tried_approaches:
-            in_tokens = usage["prompt_tokens"]
-            out_tokens = usage["completion_tokens"]
-            total_tokens = usage["total_tokens"]
-            llm_calls = usage["llm_calls"]
-
-            # estimated pricing
-            # pricing for 4K context GPT-3.5 Turbo per 1K tokens (in and out)
-            gpt_35_turbo_input_per_1k = 0.0015
-            gpt_35_turbo_output_per_1k = 0.002
-            in_tokens_price = gpt_35_turbo_input_per_1k * in_tokens / 1000
-            out_tokens_price = gpt_35_turbo_output_per_1k * out_tokens / 1000
-            approach_price = in_tokens_price + out_tokens_price
-            project_total_price += approach_price
-
-            if approach_price > max_cost:
-                max_cost = approach_price
-                approach_with_highest_cost = approach_name
-
-            if approach_name not in approach_prices:
-                approach_stats = {
-                    "in_tokens": in_tokens,
-                    "out_tokens": out_tokens,
-                    "total_tokens": total_tokens,
-                    "llm_calls": llm_calls,
-                }
-                approach_prices[approach_name] = approach_stats
-            else:
-                approach_stats = approach_prices[approach_name]
-                approach_stats["in_tokens"] += in_tokens
-                approach_stats["out_tokens"] += out_tokens
-                approach_stats["total_tokens"] += total_tokens
-                approach_stats["llm_calls"] += llm_calls
-                approach_prices[approach_name] = approach_stats
-
-        total_estimated_price += project_total_price
-        projects_with_price_estimation.append((name, round(project_total_price, 2)))
-        projects_with_price_estimation_all.append(round(project_total_price, 2))
-
-        if outcome is True:
-            projects_with_price_estimation_successes.append(
-                round(project_total_price, 2)
-            )
-        projects_with_most_costly_approach.append((name, approach_with_highest_cost))
-
         # fuzz targets
-        fuzz_targets.append(r["fuzz_target_code"])
+        generated_fuzz_targets = r["generated_fuzz_targets"]
+        for ft in generated_fuzz_targets:
+            fuzz_targets.append(ft["fuzz_target_code"])
 
-        # runtime metrics
-        if "runtime_useful" in r:
-            useful = r["runtime_useful"]
-            usefuls.append(useful)
-            bug_found = r["runtime_bug_found"]
-            bugs_found.append(bug_found)
+            # runtime metrics
+            useful = ft["is_useful"]
+            bug_found = ft["bug_found"]
 
             if useful:
                 useful_targets.append(codebase_dir)
+                approach = ft["successful_approach"]
+                successful_approaches.append(approach)
+                usefuls.append(name)
+
             if bug_found:
                 git_url = r["git_url"]
                 bug_found_targets.append((codebase_dir, git_url))
+                bugs_found.append(name)
 
     # build per approach stats
     approach_total_tokens = []
@@ -411,17 +347,6 @@ def main():
     histogram(successful_approaches, col1="Successful approach")
 
     print()
-    histogram(successful_approaches_no_none, col1="Successful approach (No None)")
-
-    print()
-    print("Costs stats (all)")
-    min_max_stats(projects_with_price_estimation_all)
-
-    print()
-    print("Costs stats (successes only)")
-    min_max_stats(projects_with_price_estimation_successes)
-
-    print()
     print("Runtime durations (all)")
     show_runtime_duration_stats(durations)
     print()
@@ -433,23 +358,6 @@ def main():
     histogram(rounded_durations_to_minutes, "Build time (rounded to minute)")
 
     print()
-    avg_llm_calls = round(statistics.mean(total_llm_calls), 2)
-    print(f"Average LLM calls per codebase: {avg_llm_calls}")
-
-    print()
-    print("Per approach stats")
-    print("*" * 60)
-
-    print()
-    print_xy(approach_total_tokens, x="Approach", y="Total tokens")
-    print()
-    print_xy(approach_in_tokens, x="Approach", y="In tokens")
-    print()
-    print_xy(approach_out_tokens, x="Approach", y="Out tokens")
-    print()
-    print_xy(approach_llm_calls, x="Approach", y="LLM calls")
-
-    print()
     print("Per project stats")
     print("*" * 60)
 
@@ -459,17 +367,6 @@ def main():
         x="Project",
         y="Duration",
         print_transform=lambda x: str(datetime.timedelta(seconds=x)),
-    )
-
-    print()
-    print_xy(projects_with_total_tokens, x="Project", y="Total tokens")
-
-    print()
-    print_xy(projects_with_price_estimation, x="Project", y="Costs (USD)")
-
-    print()
-    print_category(
-        projects_with_most_costly_approach, x="Project", y="Most costly approach"
     )
 
     print()
@@ -503,9 +400,6 @@ def main():
     for t in no_approach_worked_targets:
         print(t)
 
-    print()
-    print(f"Total estimated price: {round(total_estimated_price, 2)} USD")
-
     if args.verbose:
         print()
         print()
@@ -513,56 +407,82 @@ def main():
         print("=" * 20)
 
         for i, r in enumerate(results):
-            fuzz_target = r["fuzz_target_code"]
-            build_success = r["outcome"] is True
+            build_success = r["outcome_reason"] == "success"
             name = r["name"]
-            successful_approach = r["successful_approach"]
-            useful = None
-            bug_found = None
-
-            if "runtime_useful" in r:
-                useful = r["runtime_useful"]
-                bug_found = r["runtime_bug_found"]
-
-            show = True
-
-            if args.bug_found:
-                show = False
-                if bug_found is not None and bug_found:
-                    show = True
-            elif args.useful:
-                show = False
-                if useful is not None and useful:
-                    show = True
-            elif args.build_failure:
-                show = False
-                if not build_success:
-                    show = True
-            elif args.not_useful:
-                show = False
-                if useful is not None and not useful:
-                    show = True
-
-            if show:
-                print()
-                print(f"TARGET {i + 1}/{len(results)}")
-                print("=" * 10)
-                print(name)
-                git_url = r["git_url"]
-                print(git_url)
-                print(f"{successful_approach=}")
-                print(f"{useful=}")
-                print(f"{bug_found=}")
-                print("----")
-                print(fuzz_target)
-                print("----")
+            has_useful = False
+            has_bug_found = False
+            has_not_useful = False
+            generated_fuzz_targets = r["generated_fuzz_targets"]
+            for ft in generated_fuzz_targets:
+                useful = ft["is_useful"]
+                bug_found = ft["bug_found"]
+                if useful:
+                    has_useful = True
                 if bug_found:
-                    runtime_error = r["runtime_error"]
-                    stripped_runtime_error = strip_libfuzzer_error(runtime_error)
-                    print(stripped_runtime_error)
-                    print("----")
+                    has_bug_found = True
+                if not useful:
+                    has_not_useful = True
 
-                print()
+            if args.bug_found and not has_bug_found:
+                continue
+            if args.useful and not has_useful:
+                continue
+            if args.build_failure and build_success:
+                continue
+            if args.not_useful and not has_not_useful:
+                continue
+
+            # print code base header
+            print("*" * 30)
+            print(f"CODE BASE {i + 1}/{len(results)}")
+            print(f"{name=}")
+            print("*" * 30)
+
+            for j, ft in enumerate(generated_fuzz_targets):
+                useful = ft["is_useful"]
+                bug_found = ft["bug_found"]
+                successful_approach = ft["successful_approach"]
+                fuzz_target_code = ft["fuzz_target_code"]
+
+                show = True
+
+                if args.bug_found:
+                    show = False
+                    if bug_found is not None and bug_found:
+                        show = True
+                elif args.useful:
+                    show = False
+                    if useful is not None and useful:
+                        show = True
+                elif args.build_failure:
+                    show = False
+                    if not build_success:
+                        show = True
+                elif args.not_useful:
+                    show = False
+                    if useful is not None and not useful:
+                        show = True
+
+                if show:
+                    print()
+                    print(f"FUZZ TARGET {j + 1}/{len(generated_fuzz_targets)}")
+                    print("=" * 10)
+                    print(f"{name=}")
+                    git_url = r["git_url"]
+                    print(f"{git_url=}")
+                    print(f"{successful_approach=}")
+                    print(f"{useful=}")
+                    print(f"{bug_found=}")
+                    print("----")
+                    print(fuzz_target_code)
+                    print("----")
+                    if bug_found:
+                        runtime_error = ft["error"]
+                        stripped_runtime_error = strip_libfuzzer_error(runtime_error)
+                        print(stripped_runtime_error)
+                        print("----")
+
+                    print()
 
 
 if __name__ == "__main__":
