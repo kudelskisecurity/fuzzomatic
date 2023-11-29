@@ -53,6 +53,15 @@ Make sure to run the following command in an isolated environment such as a VM.
 poetry run fuzzomatic <codebase_dir> --stop-on bug --max-fuzz-targets 2
 ```
 
+The `--stop-on` parameter can be set to `bug`, `useful` or `building`.
+Fuzzomatic will stop when a bug is found, when a useful fuzz target is generated 
+or when a building fuzz target is generated, respectively.
+
+The `--max-fuzz-targets` parameter can be set to control how many `bug`s, `useful` or `building` 
+fuzz targets must be found to stop.
+
+By default, Fuzzomatic will stop when 1 bug is found for the target code base.
+
 # Tests
 
 To run the tests:
@@ -67,7 +76,7 @@ Fuzzomatic comes with a handful of companion tools
 
 ## batch_fuzzomatic
 
-Run fuzzomatic automatically on all code bases in a given directory
+Run Fuzzomatic automatically on all code bases in a given directory
 
 Example:
 
