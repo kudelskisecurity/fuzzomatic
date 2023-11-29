@@ -23,7 +23,6 @@ def try_functions_approach(
 
     print(f"{len(ordered_functions)} functions detected")
     print("Detected target functions:")
-    all_negative_scores = True
     for f in ordered_functions:
         print(f)
 
