@@ -226,7 +226,8 @@ def current_stats(generated_fuzz_targets):
     bug_found = 0
 
     for fuzz_target in generated_fuzz_targets:
-        _, _, _, is_useful, is_bug_found, _ = fuzz_target
+        is_useful = fuzz_target["is_useful"]
+        is_bug_found = fuzz_target["bug_found"]
         building += 1
         if is_useful:
             useful += 1
