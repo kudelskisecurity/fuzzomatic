@@ -49,7 +49,7 @@ Make sure to run the following command in an isolated environment such as a VM.
 
 
 ```
-poetry run fuzzomatic <codebase_dir> --backtrack
+poetry run fuzzomatic <codebase_dir> --stop-on bug --max-fuzz-targets 2
 ```
 
 # Tests
@@ -71,7 +71,7 @@ Run fuzzomatic automatically on all code bases in a given directory
 Example:
 
 ```
-poetry run batch_fuzzomatic /path/to/all/git-repos/ --backtrack
+poetry run batch_fuzzomatic /path/to/all/git-repos/ --stop-on bug --max-fuzz-targets 2
 ```
 
 ## eval_results
