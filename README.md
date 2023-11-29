@@ -27,13 +27,14 @@ Install the dependencies:
 poetry install
 ```
 
-Setup your OpenAI API key in `settings.yml`:
+Setup your OpenAI API key in `settings.yml`.
+The file `settings.yml.sample` can be copied as an example.
 
 ```
 cp settings.yml.sample settings.yml
-vim settings.yml
-# setup your api key in that file
 ```
+
+Now edit `settings.yml` and set your API key in there.
 
 Alternatively, set the `OPENAI_API_KEY` environment variable before running fuzzomatic:
 
@@ -43,8 +44,8 @@ export OPENAI_API_KEY=your_key_goes_here
 
 # Usage
 
-**Warning**: arbitrary code execution may happen when building/running untrusted projects or code output by an LLM.
-Use at your own risk and make sure you understand the risks of running the following command.
+> [!WARNING]
+> Arbitrary code execution may happen when building/running untrusted projects or code output by an LLM. Use at your own risk and make sure you understand the risks of running the following command.
 Make sure to run the following command in an isolated environment such as a VM.
 
 
