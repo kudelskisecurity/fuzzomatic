@@ -11,7 +11,7 @@ def try_readme_approach(
     readme_paths = detect_readme_paths(codebase_dir, parent_readme=virtual_manifest)
     if len(readme_paths) == 0:
         print("Failed to detect README")
-        return False, None
+        return
 
     for readme_path in readme_paths:
         print(f"README detected: {readme_path}")
@@ -30,9 +30,7 @@ def try_readme_approach(
         build_success, fuzz_target_path = llm_attempt(codebase_dir, prompt, target_name)
 
         if build_success:
-            return True, fuzz_target_path
-
-    return False, None
+            yield fuzz_target_path
 
 
 def detect_readme_paths(codebase_dir, parent_readme=False):

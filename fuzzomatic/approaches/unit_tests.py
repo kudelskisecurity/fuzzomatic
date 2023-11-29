@@ -20,7 +20,7 @@ def try_unit_tests_with_function_approach(
     )
     if unit_tests_with_function is None:
         print("Failed to detect unit tests with function")
-        return False, None
+        return
 
     # sort unit tests by their length (use shortest first)
     augmented_unit_tests = sorted(
@@ -59,11 +59,7 @@ def try_unit_tests_with_function_approach(
             additional_code=additional_function_code,
         )
         if success:
-            return True, fuzz_target_path
-        # otherwise, move on to next example
-
-    # no unit test worked, declare failure by this approach
-    return False, None
+            yield fuzz_target_path
 
 
 def try_unit_tests_approach(codebase_dir, target_name=DEFAULT_TARGET_NAME, **_kwargs):
@@ -72,7 +68,7 @@ def try_unit_tests_approach(codebase_dir, target_name=DEFAULT_TARGET_NAME, **_kw
 
     if unit_tests is None:
         print("Failed to detect unit tests with function")
-        return False, None
+        return
 
     i = 1
     for test_source_code, use_statements in unit_tests[:max_unit_tests]:
@@ -90,11 +86,7 @@ def try_unit_tests_approach(codebase_dir, target_name=DEFAULT_TARGET_NAME, **_kw
             codebase_dir, prompt, target_name, remaining_attempts=0
         )
         if success:
-            return True, fuzz_target_path
-        # otherwise, move on to next example
-
-    # no unit test worked, declare failure by this approach
-    return False, None
+            yield fuzz_target_path
 
 
 def detect_use_statements(source_file_path, codebase_dir):

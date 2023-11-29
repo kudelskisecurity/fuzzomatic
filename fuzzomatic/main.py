@@ -2,7 +2,6 @@
 
 import argparse
 import datetime
-import glob
 import json
 import os.path
 import subprocess
@@ -55,6 +54,25 @@ def get_parser():
         help=f"Run {prog_name} anyway. Even if project is already covered by oss-fuzz",
     )
     parser.add_argument(
+        "--stop-on",
+        dest="stop_on",
+        default="bug",
+        help="Stop on can be one of `building`, `useful` or `bug`. "
+        "`building` means stop when a building fuzz target was generated."
+        "`useful` means stop when a useful fuzz target was generated."
+        "`bug` means stop when a bug is found. ",
+    )
+    parser.add_argument(
+        "--max-fuzz-targets",
+        dest="max_fuzz_targets",
+        type=int,
+        default=1,
+        help="Stop if `max_fuzz_targets` fuzz targets match the "
+        "`stop_on` condition for this code base."
+        "For example, if max_fuzz_targets is 2 and stop_on is bug, "
+        "we will stop as soon as 2 bugs are found.",
+    )
+    parser.add_argument(
         "--run",
         action="store_true",
         dest="run",
@@ -83,100 +101,32 @@ def get_parser():
 
 
 def save_results(
-    codebase_dir,
-    fuzz_target_path,
-    outcome,
-    outcome_reason,
-    tried_approaches,
+    args,
+    git_url,
+    generated_fuzz_targets,
     start_time,
+    end_time,
+    duration,
+    outcome_reason,
 ):
-    if fuzz_target_path is not None and os.path.exists(fuzz_target_path):
-        with open(fuzz_target_path, "r") as f:
-            fuzz_target_code = f.read()
-    else:
-        fuzz_target_code = None
-
-    total_llm_calls = 0
-    total_tokens = 0
-    for approach_name, outcome, usage in tried_approaches:
-        total_llm_calls += usage["llm_calls"]
-        total_tokens += usage["total_tokens"]
-
-    name = get_codebase_name(codebase_dir)
-    git_url = utils.detect_git_url(codebase_dir)
-
-    # successful approach
-    successful_approach = None
-    for approach_name, approach_outcome, _ in tried_approaches:
-        if approach_outcome is True:
-            successful_approach = approach_name
-            break
+    name = get_codebase_name(args.codebase_dir)
 
     # runtime
-    end_time = datetime.datetime.utcnow()
-    duration: datetime.timedelta = end_time - start_time
     duration_seconds = duration.total_seconds()
 
     # create results
-    results_path = os.path.join(codebase_dir, FUZZOMATIC_RESULTS_FILENAME)
+    results_path = os.path.join(args.codebase_dir, FUZZOMATIC_RESULTS_FILENAME)
 
     results = {
-        "codebase_dir": codebase_dir,
+        "codebase_dir": args.codebase_dir,
         "name": name,
         "git_url": git_url,
-        "fuzz_target_code": fuzz_target_code,
-        "outcome": outcome,
-        "outcome_reason": outcome_reason,
-        "successful_approach": successful_approach,
-        "tried_approaches": tried_approaches,
+        "generated_fuzz_targets": generated_fuzz_targets,
         "start_time": start_time.isoformat(),
         "end_time": end_time.isoformat(),
         "duration_seconds": duration_seconds,
-        "total_llm_calls": total_llm_calls,
-        "total_tokens": total_tokens,
+        "outcome_reason": outcome_reason,
     }
-
-    # combine results due to backtracking
-    if os.path.exists(results_path):
-        with open(results_path, "r") as f:
-            previous_results = json.loads(f.read())
-
-            # outcome and reason
-            previous_outcome = previous_results["outcome"]
-            previous_outcome_reason = previous_results["outcome_reason"]
-            previous_fuzz_target_code = previous_results["fuzz_target_code"]
-
-            if outcome is not True and previous_outcome is True:
-                results["outcome"] = previous_outcome
-                results["outcome_reason"] = previous_outcome_reason
-                results["fuzz_target_code"] = previous_fuzz_target_code
-
-            # tried approaches
-            previous_tried_approaches = previous_results["tried_approaches"]
-            total_tried_approaches = []
-            total_tried_approaches.extend(previous_tried_approaches)
-            total_tried_approaches.extend(tried_approaches)
-            results["tried_approaches"] = total_tried_approaches
-
-            # successful approach
-            if successful_approach is None:
-                # combine successful approach in case it worked before, but fails now
-                for ta, outcome, _ in total_tried_approaches:
-                    if outcome is True:
-                        successful_approach = ta
-                results["successful_approach"] = successful_approach
-
-            # total time
-            previous_duration_seconds = previous_results["duration_seconds"]
-            results["duration_seconds"] = duration_seconds + previous_duration_seconds
-
-            # LLM calls
-            previous_llm_calls = previous_results["total_llm_calls"]
-            results["total_llm_calls"] = total_llm_calls + previous_llm_calls
-
-            # total tokens
-            previous_total_tokens = previous_results["total_tokens"]
-            results["total_tokens"] = total_tokens + previous_total_tokens
 
     # save results to file
     with open(results_path, "w+") as fout:
@@ -196,87 +146,16 @@ def get_approaches(requested_approaches):
     return approaches
 
 
-def generate_and_build(codebase_dir, git_url, approaches, force=False):
-    start_time = datetime.datetime.utcnow()
-
+def generate_building_fuzz_targets(codebase_dir, git_url, approaches, force=False):
     codebase_name = get_codebase_name(codebase_dir)
-    try:
-        if not force:
-            print(f"Checking if {codebase_name} is not already in oss-fuzz")
-            if discovery.is_project_to_be_skipped(codebase_dir, git_url):
-                print(
-                    "[WARNING] project is already covered "
-                    "by oss-fuzz or fuzzing is in place. "
-                    "Pass --force to overwrite."
-                )
-                print("Aborting")
-                sys.exit(EXIT_PROJECT_ALREADY_FUZZED)
+    if not force:
+        print(f"Checking if {codebase_name} is not already in oss-fuzz")
+        if discovery.is_project_to_be_skipped(codebase_dir, git_url):
+            yield "message", EXIT_PROJECT_ALREADY_FUZZED
 
-        # if approaches passed on cli, use those only
-        fuzz_target_path, tried_approaches = autofuzz_codebase(
-            codebase_dir, approaches=approaches
-        )
-    except SystemExit as e:
-        # save results before exiting
-        tried_approaches = []
-        fuzz_target_path = utils.build_fuzz_target_path(
-            codebase_dir, DEFAULT_TARGET_NAME
-        )
-        outcome_reason = None
-        exit_code = e.code
-        if exit_code == EXIT_NOT_A_CARGO_PROJECT:
-            outcome_reason = "not_a_cargo_project"
-        elif exit_code == EXIT_PROJECT_ALREADY_FUZZED:
-            outcome_reason = "project_already_fuzzed"
-        elif exit_code == EXIT_PROJECT_DOES_NOT_BUILD:
-            outcome_reason = "project_does_not_build"
-        elif exit_code == EXIT_OPENAI_API_KEY_ERROR:
-            sys.exit(-1)
-
-        save_results(
-            codebase_dir,
-            fuzz_target_path,
-            False,
-            outcome_reason,
-            tried_approaches,
-            start_time,
-        )
-
-        end_time = datetime.datetime.utcnow()
-        duration = end_time - start_time
-        return False, duration, fuzz_target_path
-
-    if fuzz_target_path is not None:
-        print("Autofuzz successful!")
-        print("Successfully generated a fuzz target that builds at: ")
-        print(fuzz_target_path)
-
-        # save results to a file in the codebase_dir
-        save_results(
-            codebase_dir,
-            fuzz_target_path,
-            True,
-            "target_build_success",
-            tried_approaches,
-            start_time,
-        )
-        end_time = datetime.datetime.utcnow()
-        duration = end_time - start_time
-        return True, duration, fuzz_target_path
-    else:
-        print("Failed to automatically generate a working fuzz target")
-        print("No heuristic worked")
-        save_results(
-            codebase_dir,
-            fuzz_target_path,
-            False,
-            "no_approach_worked",
-            tried_approaches,
-            start_time,
-        )
-        end_time = datetime.datetime.utcnow()
-        duration = end_time - start_time
-        return False, duration, fuzz_target_path
+    autofuzz_generator = autofuzz_codebase(codebase_dir, approaches=approaches)
+    for result in autofuzz_generator:
+        yield result
 
 
 def ensure_dependencies_available():
@@ -332,145 +211,137 @@ def main(args=None):
     else:
         git_url = detect_git_url(args.codebase_dir)
 
-    build_and_run_once(args, git_url)
+    process_codebase(args, git_url)
 
-    if args.backtrack:
-        backtrack(args, args.codebase_dir, git_url)
+    # TODO remove backtrack related stuff (args.backtrack, etc., backtrack function)
 
     very_end = datetime.datetime.utcnow()
     total_duration = very_end - very_start
     print(f"Total duration: {total_duration}")
 
 
-def backtrack(args, codebase_dir, git_url):
-    print("Starting backtracking loop")
-    backtracking_count = 0
-    while True:
-        # read results from files
-        r = read_codebase_results(args.codebase_dir)
-        useful_targets = 0
-        should_exit = True
+def current_stats(generated_fuzz_targets):
+    building = 0
+    useful = 0
+    bug_found = 0
 
-        useful = None
-        tried_approaches = None
-        build_success = None
-        has_untried_approaches = None
-        untried_approaches = []
+    for fuzz_target in generated_fuzz_targets:
+        _, _, _, is_useful, is_bug_found, _ = fuzz_target
+        building += 1
+        if is_useful:
+            useful += 1
+        if is_bug_found:
+            bug_found += 1
 
-        if "outcome" in r:
-            build_success = r["outcome"] is True
-
-        if "runtime_useful" in r:
-            useful = r["runtime_useful"]
-
-            if useful:
-                useful_targets += 1
-
-        if "tried_approaches" in r:
-            tried_approaches = r["tried_approaches"]
-            tried_names = []
-            for ta in tried_approaches:
-                [name, _, _] = ta
-                tried_names.append(name)
-
-            enabled_approaches_names = []
-            for name, _ in ENABLED_APPROACHES:
-                enabled_approaches_names.append(name)
-
-            all_approaches = set(enabled_approaches_names)
-            tried_approaches = set(tried_names)
-
-            untried_approaches = list(all_approaches - tried_approaches)
-
-            if len(untried_approaches) > 0:
-                has_untried_approaches = True
-            else:
-                has_untried_approaches = False
-
-        if build_success is not None and build_success is True:
-            if useful is not None and not useful:
-                if has_untried_approaches is not None and has_untried_approaches:
-                    # project doesn't have a useful target
-                    # and there are still approaches to try
-                    should_exit = False
-
-        # exit condition
-        if should_exit:
-            break
-
-        backtracking_count += 1
-
-        print()
-        print(f"{backtracking_count=}")
-
-        print("Retrying with approaches:")
-        print(untried_approaches)
-
-        # re-run the build step, starting with the approaches not yet tried
-        approaches = get_approaches(untried_approaches)
-        _, _, fuzz_target_path = generate_and_build(
-            codebase_dir, git_url, approaches, force=True
-        )
-
-        # re-run the runtime step
-        cleanup_corpus(codebase_dir)
-        is_fuzz_target_useful, bug_found, error = evaluate_target(
-            codebase_dir, fuzz_target_path, max_total_time_seconds=10
-        )
-        print(f"{is_fuzz_target_useful=}")
-        print(f"{bug_found=}")
-        if is_fuzz_target_useful:
-            # project is now useful
-            print("[SUCCESS] Backtracking made the target become useful.")
-
-        # end while True
-
-    print()
-    print("Backtracking completed")
-    print(f"Backtrack count: {backtracking_count}")
+    return building, useful, bug_found
 
 
-def build_and_run_once(args, git_url):
+def process_codebase(args, git_url):
+    start_time = datetime.datetime.utcnow()
+
     # check if results file already exists
     target_results = read_codebase_results(args.codebase_dir)
+    if target_results is not None:
+        print("Code base already processed by fuzzomatic. Skipping...")
+        return
 
-    skip_build = False
-    skip_run = False
-    build_successful = False
-    if target_results is not None and "runtime_useful" in target_results:
-        # skip whole initial step
-        print(
-            "Skipping whole initial step. Autofuzz already generated a useful target."
-        )
-        skip_run = True
-    elif target_results is not None and "outcome" in target_results:
-        # skip the build
-        skip_build = True
-        print("Skipping build")
-        build_successful = target_results["outcome"]
-    if (not skip_build and not skip_run) or args.force:
-        print("Building target")
-        # run build step once
-        approaches = get_approaches(args.approaches)
-        build_successful, duration, fuzz_target_path = generate_and_build(
-            args.codebase_dir, git_url, approaches, force=args.force
-        )
-        print(f"Outcome: {build_successful}")
+    approaches = get_approaches(args.approaches)
 
-    # run runtime step once
-    if (
-        not build_successful or skip_run or (not args.run and not args.backtrack)
-    ):  # skip failed builds
-        print("Skipping runtime...")
-    else:
-        print(f"Running target: {args.codebase_dir}")
-        cleanup_corpus(args.codebase_dir)
+    generator = generate_building_fuzz_targets(
+        args.codebase_dir, git_url, approaches, force=args.force
+    )
 
-        is_fuzz_target_useful, bug_found, error = evaluate_target(
-            args.codebase_dir, fuzz_target_path, max_total_time_seconds=10
-        )
-        print(f"{is_fuzz_target_useful=}")
-        print(f"{bug_found=}")
+    generated_fuzz_targets = []
+    outcome_reason = "success"
+    for building_target in generator:
+        result_type, contents = building_target
+
+        if result_type == "fuzz_target":
+            fuzz_target_code, fuzz_target_path, successful_approach = contents
+
+            fuzz_project_dir = os.path.realpath(
+                os.path.join(os.path.dirname(fuzz_target_path), os.path.pardir)
+            )
+
+            # Try to run the target and evaluate it
+            print(f"Running target: {args.codebase_dir}")
+            cleanup_corpus(fuzz_project_dir)
+
+            is_useful, bug_found, error = evaluate_target(
+                fuzz_project_dir, max_total_time_seconds=10
+            )
+            print(f"{is_useful=}")
+            print(f"{bug_found=}")
+
+            fuzz_target_result = {
+                "fuzz_target_code": fuzz_target_code,
+                "fuzz_target_path": fuzz_target_path,
+                "successful_approach": successful_approach,
+                "is_useful": is_useful,
+                "bug_found": bug_found,
+                "error": error.decode("utf-8"),
+            }
+            generated_fuzz_targets.append(fuzz_target_result)
+
+            # print current stats
+            building, useful, bug_found = current_stats(generated_fuzz_targets)
+            print("Generated fuzz targets so far for this codebase:")
+            print("*" * 50)
+            print(f"{args.codebase_dir=}")
+            print(f"{building=}")
+            print(f"{useful=}")
+            print(f"{bug_found=}")
+            print("*" * 50)
+
+            # check stop conditions
+            if args.stop_on == "building":
+                if building >= args.max_fuzz_targets:
+                    print("Stopping condition reached. Stopping.")
+                    print(f"{building=} >= {args.max_fuzz_targets}")
+                    break
+            if args.stop_on == "useful":
+                if useful >= args.max_fuzz_targets:
+                    print("Stopping condition reached. Stopping.")
+                    print(f"{useful=} >= {args.max_fuzz_targets}")
+                    break
+            if args.stop_on == "bug":
+                if bug_found >= args.max_fuzz_targets:
+                    print("Stopping condition reached. Stopping.")
+                    print(f"{bug_found=} >= {args.max_fuzz_targets}")
+                    break
+        elif result_type == "message":
+            exit_code = contents
+            outcome_reason = "unknown"
+            if exit_code == EXIT_NOT_A_CARGO_PROJECT:
+                outcome_reason = "not_a_cargo_project"
+            elif exit_code == EXIT_PROJECT_ALREADY_FUZZED:
+                outcome_reason = "project_already_fuzzed"
+                print(
+                    "[WARNING] project is already covered "
+                    "by oss-fuzz or fuzzing is in place. "
+                    "Pass --force to overwrite."
+                )
+                print("Aborting")
+            elif exit_code == EXIT_PROJECT_DOES_NOT_BUILD:
+                outcome_reason = "project_does_not_build"
+            elif exit_code == EXIT_OPENAI_API_KEY_ERROR:
+                print("OpenAI API key not set. Aborting.")
+                sys.exit(-1)
+            break
+
+    end_time = datetime.datetime.utcnow()
+    duration = end_time - start_time
+
+    # save results to disk
+    save_results(
+        args,
+        git_url,
+        generated_fuzz_targets,
+        start_time,
+        end_time,
+        duration,
+        outcome_reason,
+    )
 
 
 def read_codebase_results(codebase_dir):
@@ -546,30 +417,33 @@ def autofuzz_codebase(
     approaches=[],
     root_codebase_dir=None,
 ):
-    tried_approaches = []
     # cargo fuzz init
-    success = init_cargo_fuzz(codebase_dir, target_name)
+    cargo_fuzz_init_success = init_cargo_fuzz(codebase_dir, target_name)
 
     # check whether it's a virtual manifest
     is_virtual_manifest = check_virtual_manifest(codebase_dir)
     is_workspace = check_has_workspace_members(codebase_dir)
 
-    if not success and not is_virtual_manifest:
+    if not cargo_fuzz_init_success and not is_virtual_manifest:
         print("Aborting... could not cargo fuzz init, and not a virtual manifest")
-        raise SystemExit(EXIT_NOT_A_CARGO_PROJECT)
+        # raise SystemExit(EXIT_NOT_A_CARGO_PROJECT)
+        yield "message", EXIT_NOT_A_CARGO_PROJECT
 
-    if success and not is_workspace:
-        check_project_builds_or_exit(codebase_dir)
+    if cargo_fuzz_init_success and not is_workspace:
+        project_builds = check_project_builds(codebase_dir)
+        if not project_builds:
+            # if the project does not build by default, don't bother
+            yield "message", EXIT_PROJECT_DOES_NOT_BUILD
 
     if is_workspace:
-        fuzz_target_path, tried_approaches = autofuzz_workspace(
+        # fuzz_target_path, tried_approaches = autofuzz_workspace(
+        workspace_generator = autofuzz_workspace(
             codebase_dir, target_name=target_name, approaches=approaches
         )
+        for result in workspace_generator:
+            yield result
 
-        if fuzz_target_path is not None:
-            return fuzz_target_path, tried_approaches
-
-    if success:
+    if cargo_fuzz_init_success:
         # add dependencies from the parent Cargo.toml file to the fuzz Cargo project
         fuzzomatic.tools.utils.add_parent_dependencies(codebase_dir, root_codebase_dir)
         # also add the arbitrary crate for target functions with multiple arguments
@@ -584,35 +458,25 @@ def autofuzz_codebase(
             reset_ask_llm_counts()
 
             # attempt approach
-            success, fuzz_target_path = approach_function(
+            approach_function_generator = approach_function(
                 codebase_dir,
                 target_name=target_name,
                 virtual_manifest=virtual_manifest,
                 root_codebase_dir=root_codebase_dir,
             )
 
-            outcome = success
-
-            usage = {
-                "prompt_tokens": ask_llm.prompt_tokens,
-                "completion_tokens": ask_llm.completion_tokens,
-                "total_tokens": ask_llm.total_tokens,
-                "llm_calls": ask_llm.counter,
-            }
-            tried_approaches.append((approach_name, outcome, usage))
-            if success:
-                return fuzz_target_path, tried_approaches
-
-    return None, tried_approaches
+            for result in approach_function_generator:
+                fuzz_target_path = result
+                with open(fuzz_target_path, "r") as f:
+                    fuzz_target_code = f.read()
+                yield "fuzz_target", (fuzz_target_code, fuzz_target_path, approach_name)
 
 
-def check_project_builds_or_exit(codebase_dir):
+def check_project_builds(codebase_dir):
     print("Checking if project builds by default...")
     default_builds = is_project_building_by_default(codebase_dir)
     print(f"{default_builds=}")
-    # if the project does not build by default, don't bother
-    if not default_builds:
-        raise SystemExit(EXIT_PROJECT_DOES_NOT_BUILD)
+    return default_builds
 
 
 ENABLED_APPROACHES = [

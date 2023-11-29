@@ -16,7 +16,7 @@ def try_examples_approach(
 
     if example_paths is None:
         print("Failed to detect examples")
-        return False, None
+        return
 
     if examples_dirname == "examples":
         print("Examples detected.")
@@ -40,11 +40,7 @@ def try_examples_approach(
             codebase_dir, prompt, target_name, remaining_attempts=1
         )
         if success:
-            return True, fuzz_target_path
-        # otherwise, move on to next example
-
-    # no example worked, declare failure by this approach
-    return False, None
+            yield fuzz_target_path
 
 
 def detect_example_paths(codebase_dir, examples_dirname):

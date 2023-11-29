@@ -7,6 +7,7 @@ import subprocess
 from fuzzomatic.tools.constants import (
     FUZZOMATIC_RESULTS_FILENAME,
     DEFAULT_MAX_TOTAL_TIME_SECONDS,
+    DEFAULT_TARGET_NAME,
 )
 
 
@@ -80,13 +81,9 @@ def save_runtime_results(codebase_dir, useful, bug_found, error):
 
 
 def evaluate_target(
-    codebase_dir,
-    fuzz_target_path,
+    fuzz_project_dir,
     max_total_time_seconds=DEFAULT_MAX_TOTAL_TIME_SECONDS,
 ):
-    fuzz_project_dir = os.path.realpath(
-        os.path.join(os.path.dirname(fuzz_target_path), os.path.pardir)
-    )
     success, error = run_fuzz_target(
         fuzz_project_dir, max_total_time_seconds=max_total_time_seconds
     )
@@ -101,7 +98,7 @@ def evaluate_target(
     lines = error.decode("utf-8").split("\n")
     for line in lines:
         if panic_pattern in line:
-            if "fuzz_targets/auto.rs" in line:
+            if f"fuzz_targets/{DEFAULT_TARGET_NAME}.rs" in line:
                 panic_outside_fuzz_target = False
                 break
             else:
@@ -109,7 +106,7 @@ def evaluate_target(
 
     # useful:
     #  * cov changes or panicks outside fuzz target
-    useful = cov_changes or (
+    is_useful = cov_changes or (
         panic_outside_fuzz_target is not None and panic_outside_fuzz_target
     )
 
@@ -119,14 +116,11 @@ def evaluate_target(
         panic_outside_fuzz_target is not None and panic_outside_fuzz_target
     )
 
-    # save the results to file
-    save_runtime_results(codebase_dir, useful, bug_found, error)
-
-    return useful, bug_found, error
+    return is_useful, bug_found, error
 
 
 def cleanup_corpus(t):
-    corpus_dir = os.path.join(t, "fuzz", "corpus")
+    corpus_dir = os.path.join(t, "corpus")
     if os.path.exists(corpus_dir):
         print("Cleaning up corpus dir")
         print(corpus_dir)

@@ -397,7 +397,7 @@ def add_parent_dependencies(codebase_dir, root_codebase_dir):
                 v["path"] = path
 
         for k, v in parent_dependencies.items():
-            if "workspace" in v and v["workspace"] == True:
+            if "workspace" in v and v["workspace"] is True:
                 # update using workspace Cargo.toml
                 wdep = copy.deepcopy(wdeps[k])
 

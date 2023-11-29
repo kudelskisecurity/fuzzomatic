@@ -17,7 +17,7 @@ def try_functions_approach(
 
     if functions is None:
         print("Failed to detect functions")
-        return False, None
+        return
 
     ordered_functions = score_functions(functions)
 
@@ -40,9 +40,7 @@ def try_functions_approach(
         success, fuzz_target_path = try_function(f, codebase_dir, target_name)
 
         if success:
-            return True, fuzz_target_path
-
-    return False, None
+            yield fuzz_target_path
 
 
 def score_functions(functions):
