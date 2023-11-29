@@ -26,21 +26,25 @@ def try_functions_approach(
     all_negative_scores = True
     for f in ordered_functions:
         print(f)
-        score = f[3]
-        if score >= 0:
-            all_negative_scores = False
 
-    max_functions = 5  # try max N functions
-    if all_negative_scores:
-        max_functions = 2
+    max_functions = 8  # try max N functions
+    max_negative_score_functions = 2
+    negative_score_functions = 0
     for f in ordered_functions[:max_functions]:
         print("Attempting function:")
         print(f)
+        score = f[3]
+
+        if score <= 0:
+            negative_score_functions += 1
 
         success, fuzz_target_path = try_function(f, codebase_dir, target_name)
 
         if success:
             yield fuzz_target_path
+
+        if negative_score_functions >= max_negative_score_functions:
+            break
 
 
 def score_functions(functions):
