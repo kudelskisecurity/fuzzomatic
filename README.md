@@ -10,13 +10,15 @@ Automatically fuzz Rust projects from scratch
 * Rust (install using [rustup](https://rustup.rs/))
 * Cargo fuzz (see below)
 * Semgrep (see below)
-* An OpenAI API key
+* Poetry (see below)
+* An OpenAI API key (see [instructions](https://platform.openai.com/docs/quickstart/account-setup?context=python))
 
 ```
 cargo install cargo-fuzz
 rustup toolchain install nightly
 rustup default nightly
 pipx install semgrep
+pipx install poetry
 ```
 
 # Installation
