@@ -246,7 +246,6 @@ def process_codebase(args, git_url):
             )
 
             # Try to run the target and evaluate it
-            print(f"Running target: {args.codebase_dir}")
             cleanup_corpus(fuzz_project_dir)
 
             is_useful, bug_found, error = evaluate_target(

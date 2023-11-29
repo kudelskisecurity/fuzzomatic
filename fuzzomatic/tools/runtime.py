@@ -84,6 +84,7 @@ def evaluate_target(
     fuzz_project_dir,
     max_total_time_seconds=DEFAULT_MAX_TOTAL_TIME_SECONDS,
 ):
+    print(f"Evaluating target: {fuzz_project_dir}")
     success, error = run_fuzz_target(
         fuzz_project_dir, max_total_time_seconds=max_total_time_seconds
     )
