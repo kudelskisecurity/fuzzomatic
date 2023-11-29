@@ -270,6 +270,11 @@ def process_codebase(args, git_url):
             is_useful, bug_found, error = evaluate_target(
                 fuzz_project_dir, max_total_time_seconds=10
             )
+            if bug_found:
+                error = error.decode("utf-8")
+            else:
+                # do not store output if no bug is found
+                error = None
             print(f"{is_useful=}")
             print(f"{bug_found=}")
 
@@ -279,7 +284,7 @@ def process_codebase(args, git_url):
                 "successful_approach": successful_approach,
                 "is_useful": is_useful,
                 "bug_found": bug_found,
-                "error": error.decode("utf-8"),
+                "error": error,
             }
             generated_fuzz_targets.append(fuzz_target_result)
 
