@@ -314,7 +314,7 @@ def process_codebase(args, git_url):
     end_time = datetime.datetime.utcnow()
     duration = end_time - start_time
 
-    if len(generated_fuzz_targets) == 0:
+    if len(generated_fuzz_targets) == 0 and outcome_reason == "success":
         outcome_reason = "no_approach_worked"
 
     # save results to disk
