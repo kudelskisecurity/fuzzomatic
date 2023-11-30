@@ -273,7 +273,9 @@ def main():
 
     print("")
 
-    successful_approaches = []
+    successful_approaches_building = []
+    successful_approaches_useful = []
+    successful_approaches_bug_found = []
     usefuls = []
     has_building = []
     has_useful = []
@@ -320,16 +322,19 @@ def main():
 
             building_targets.append(codebase_dir)
 
+            approach = ft["successful_approach"]
+            successful_approaches_building.append(approach)
+
             if useful:
                 useful_targets.append(codebase_dir)
-                approach = ft["successful_approach"]
-                successful_approaches.append(approach)
+                successful_approaches_useful.append(approach)
                 usefuls.append(name)
 
             if bug_found:
                 git_url = r["git_url"]
                 bug_found_targets.append((codebase_dir, git_url))
                 bugs_found.append(name)
+                successful_approaches_bug_found.append(approach)
 
         has_building.append(contains_building)
         has_useful.append(contains_useful)
@@ -364,7 +369,13 @@ def main():
     histogram(outcome_reasons, col1="Outcome reason")
 
     print()
-    histogram(successful_approaches, col1="Successful approach")
+    histogram(successful_approaches_building, col1="Building approach")
+
+    print()
+    histogram(successful_approaches_useful, col1="Useful approach")
+
+    print()
+    histogram(successful_approaches_bug_found, col1="Bug found approach")
 
     print()
     print("Runtime durations (all)")
