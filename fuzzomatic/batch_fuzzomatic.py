@@ -86,7 +86,7 @@ def main():
 
     very_end = datetime.datetime.utcnow()
     total_duration = very_end - very_start
-    print(f"Total duration: {total_duration}")
+    print(f"Batch total duration: {total_duration}")
 
 
 if __name__ == "__main__":
