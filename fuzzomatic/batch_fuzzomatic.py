@@ -44,19 +44,19 @@ def get_targets(targets_dir):
     return dirs
 
 
-def run_fuzzomatic(codebase_dir, run_on, max_fuzz_targets):
+def run_fuzzomatic(codebase_dir, stop_on, max_fuzz_targets):
     fparser = fuzzomatic_parser()
     args = fparser.parse_args(["foobar"])
     args.codebase_dir = codebase_dir
 
-    args.run_on = run_on
+    args.stop_on = stop_on
     args.max_fuzz_targets = max_fuzz_targets
 
     print()
     print("*" * 80)
     print("Calling fuzzomatic:")
     print(f"{codebase_dir=}")
-    print(f"{run_on=}")
+    print(f"{stop_on=}")
     print(f"{max_fuzz_targets=}")
     fuzzomatic_main(args=args)
 
@@ -64,7 +64,7 @@ def run_fuzzomatic(codebase_dir, run_on, max_fuzz_targets):
 def main():
     parser = get_parser()
     args = parser.parse_args()
-    run_on = args.run_on
+    stop_on = args.stop_on
     max_fuzz_targets = args.max_fuzz_targets
 
     targets_dir = args.targets_dir
@@ -82,7 +82,7 @@ def main():
     print("Starting initial run loop")
     for i, t in enumerate(targets):
         print(f"Running fuzzomatic on target {i + 1}/{total_targets}: {t}")
-        run_fuzzomatic(t, run_on, max_fuzz_targets)
+        run_fuzzomatic(t, stop_on, max_fuzz_targets)
 
     very_end = datetime.datetime.utcnow()
     total_duration = very_end - very_start
