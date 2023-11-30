@@ -215,6 +215,7 @@ def main():
     approach_prices = {}
     projects_with_durations = []
 
+    building_targets = []
     useful_targets = []
     bug_found_targets = []
     no_approach_worked_targets = []
@@ -274,8 +275,9 @@ def main():
 
     successful_approaches = []
     usefuls = []
-    bugs_found = []
+    has_building = []
     has_useful = []
+    bugs_found = []
     has_bug_found = []
     for r in results:
         name = r["name"]
@@ -300,9 +302,11 @@ def main():
 
         # fuzz targets
         generated_fuzz_targets = r["generated_fuzz_targets"]
+        contains_building = False
         contains_useful = False
         contains_bug_found = False
         for ft in generated_fuzz_targets:
+            contains_building = True
             fuzz_targets.append(ft["fuzz_target_code"])
 
             # runtime metrics
@@ -313,6 +317,8 @@ def main():
                 contains_useful = True
             if bug_found:
                 contains_bug_found = True
+
+            building_targets.append(codebase_dir)
 
             if useful:
                 useful_targets.append(codebase_dir)
@@ -325,6 +331,7 @@ def main():
                 bug_found_targets.append((codebase_dir, git_url))
                 bugs_found.append(name)
 
+        has_building.append(contains_building)
         has_useful.append(contains_useful)
         has_bug_found.append(contains_bug_found)
 
@@ -386,6 +393,10 @@ def main():
     print()
     print("RUNTIME METRICS")
     print("=" * 20)
+
+    print()
+    histogram(has_building, col1="Code bases w/ Building")
+
     print()
     histogram(has_useful, col1="Code bases w/ Useful")
 
@@ -393,6 +404,12 @@ def main():
     histogram(has_bug_found, col1="Code bases w/ Bugs")
 
     print()
+    print()
+    print("Building targets:")
+    building_counter = collections.Counter(building_targets)
+    for t, count in building_counter.items():
+        print(f"{t} ({count})")
+
     print()
     print("Useful targets:")
     useful_counter = collections.Counter(useful_targets)
