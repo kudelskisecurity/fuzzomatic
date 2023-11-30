@@ -275,6 +275,8 @@ def main():
     successful_approaches = []
     usefuls = []
     bugs_found = []
+    has_useful = []
+    has_bug_found = []
     for r in results:
         name = r["name"]
         codebase_dir = r["codebase_dir"]
@@ -298,12 +300,19 @@ def main():
 
         # fuzz targets
         generated_fuzz_targets = r["generated_fuzz_targets"]
+        contains_useful = False
+        contains_bug_found = False
         for ft in generated_fuzz_targets:
             fuzz_targets.append(ft["fuzz_target_code"])
 
             # runtime metrics
             useful = ft["is_useful"]
             bug_found = ft["bug_found"]
+
+            if useful:
+                contains_useful = True
+            if bug_found:
+                contains_bug_found = True
 
             if useful:
                 useful_targets.append(codebase_dir)
@@ -315,6 +324,9 @@ def main():
                 git_url = r["git_url"]
                 bug_found_targets.append((codebase_dir, git_url))
                 bugs_found.append(name)
+
+        has_useful.append(contains_useful)
+        has_bug_found.append(contains_bug_found)
 
     # build per approach stats
     approach_total_tokens = []
@@ -375,10 +387,10 @@ def main():
     print("RUNTIME METRICS")
     print("=" * 20)
     print()
-    histogram(usefuls, col1="Useful fuzz targets")
+    histogram(has_useful, col1="Code bases w/ Useful")
 
     print()
-    histogram(bugs_found, col1="Bugs found")
+    histogram(has_bug_found, col1="Code bases w/ Bugs")
 
     print()
     print()
