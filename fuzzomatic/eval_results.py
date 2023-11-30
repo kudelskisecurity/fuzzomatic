@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import collections
 import datetime
 import glob
 import json
@@ -377,23 +378,25 @@ def main():
     histogram(usefuls, col1="Useful fuzz targets")
 
     print()
-    histogram(bugs_found, col1="Bug found")
+    histogram(bugs_found, col1="Bugs found")
 
     print()
     print()
     print("Useful targets:")
-    for t in useful_targets:
-        print(t)
+    useful_counter = collections.Counter(useful_targets)
+    for t, count in useful_counter.items():
+        print(f"{t} ({count})")
 
     print()
     print("Bug found in targets:")
-    for codebase_dir, git_url in bug_found_targets:
-        print(codebase_dir)
+    bug_counter = collections.Counter(bug_found_targets)
+    for (codebase_dir, git_url), count in bug_counter.items():
+        print(f"{codebase_dir} ({count})")
 
     print()
     print("Bug found in targets (git URLs):")
-    for codebase_dir, git_url in bug_found_targets:
-        print(git_url)
+    for (codebase_dir, git_url), count in bug_counter.items():
+        print(f"{git_url} ({count})")
 
     print()
     print("Targets where no approach worked:")
