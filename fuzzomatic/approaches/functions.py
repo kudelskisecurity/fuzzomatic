@@ -73,7 +73,7 @@ def score_functions(functions):
             elif arg_type == "bool":
                 priority = 0
             elif arg_type == "unknown":
-                priority = -10
+                priority = 10
             elif type(arg_type) == tuple and arg_type[0] == "&array":
                 priority = 100
             elif is_name_interesting:
