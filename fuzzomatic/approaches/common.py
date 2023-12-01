@@ -160,7 +160,7 @@ def add_missing_cargo_dependencies(codebase_dir, error, code_snippet, target_nam
                         codebase_dir, target_name
                     )
                     if build_success:
-                        return build_success, error
+                        return build_success, error, built_code
     else:
         print("Could not detect any superfluous extern crate statements")
 
