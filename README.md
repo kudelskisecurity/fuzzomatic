@@ -52,7 +52,7 @@ export OPENAI_API_KEY=your_key_goes_here
 
 
 ```
-poetry run fuzzomatic <codebase_dir> --stop-on bug --max-fuzz-targets 2
+poetry run fz <codebase_dir> --stop-on bug --max-fuzz-targets 2
 ```
 
 The `--stop-on` parameter can be set to `bug`, `useful` or `building`.
@@ -76,59 +76,59 @@ To run the tests:
 
 Fuzzomatic comes with a handful of companion tools
 
-## batch_fuzzomatic
+## fz-batch
 
 Run Fuzzomatic automatically on all code bases in a given directory
 
 Example:
 
 ```
-poetry run batch_fuzzomatic /path/to/all/git-repos/ --stop-on bug --max-fuzz-targets 2
+poetry run fz-batch /path/to/all/git-repos/ --stop-on bug --max-fuzz-targets 2
 ```
 
-## eval_results
+## fz-results
 
 Print results of fuzzomatic runs. Fuzzomatic writes its results to `.fuzzomatic_results.json`
-in each code base it was run on. `eval_results` will read these result files and print them
+in each code base it was run on. `fz-results` will read these result files and print them
 in a readable way.
 
-`eval_results` can be used on a single code base
-as well as on a directory that was used with `batch_fuzzomatic`. In the second case,
+`fz-results` can be used on a single code base
+as well as on a directory that was used with `fz-batch`. In the second case,
 it will print aggregate statistics over all projects.
 
 Example:
 
 ```
-poetry run eval_results /path/to/codebase
+poetry run fz-results /path/to/codebase
 ```
 
 Show aggregate stats but only show details for projects where a bug was found:
 
 ```
-poetry run eval_results /path/to/all/git-repos -v --bug-found
+poetry run fz-results /path/to/all/git-repos -v --bug-found
 ```
 
-## discovery
+## fz-discover
 
 Discover and git clone projects on GitHub for automated fuzzing with fuzzomatic
 
 Example:
 
 ```
-poetry run discover \
+poetry run fz-discover \
 --max-projects 10 \
 --target-dir /path/where/to/git/clone/projects \
 --query "parser library"
 ```
 
-## oss_fuzz
+## fz-oss-fuzz
 
 Build the list of projects already covered by OSS-fuzz and save it to `oss-fuzz-projects.csv`
 
 Usage:
 
 ```
-poetry run oss_fuzz
+poetry run fz-oss-fuzz
 ```
 
 # License and Copyright

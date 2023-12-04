@@ -16,12 +16,12 @@ toml = "^0.10.2"
 pyyaml = "^6.0.1"
 
 [tool.poetry.scripts]
-fuzzomatic = "fuzzomatic.main:main"
-eval_results = "fuzzomatic.eval_results:main"
-batch_fuzzomatic = "fuzzomatic.batch_fuzzomatic:main"
-discovery = "fuzzomatic.discovery:main"
-oss_fuzz = "fuzzomatic.oss_fuzz:main"
-docparse = "fuzzomatic.docparse:main"
+fz = "fuzzomatic.main:main"
+fz-results = "fuzzomatic.eval_results:main"
+fz-batch = "fuzzomatic.batch_fuzzomatic:main"
+fz-discover = "fuzzomatic.discovery:main"
+fz-oss-fuzz = "fuzzomatic.oss_fuzz:main"
+fz-docparse = "fuzzomatic.docparse:main"
 
 [build-system]
 requires = ["poetry-core"]
