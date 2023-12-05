@@ -64,6 +64,8 @@ fuzz targets must be found to stop.
 
 By default, Fuzzomatic will stop when 1 bug is found for the target code base.
 
+When Fuzzomatic completes, use `fz-results` (see below) to display detailed information about what Fuzzomatic found.
+
 # Tests
 
 To run the tests:
