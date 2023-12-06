@@ -47,11 +47,17 @@ def get_parser():
     parser.add_argument(
         "codebase_dir", help="Path to the codebase to generate a fuzz target for"
     )
+
+    parser = add_parser_shared_arguments(parser)
+    return parser
+
+
+def add_parser_shared_arguments(parser):
     parser.add_argument(
         "--force",
         action="store_true",
         dest="force",
-        help=f"Run {prog_name} anyway. Even if project is already covered by oss-fuzz",
+        help="Run Fuzzomatic anyway. Even if project is already covered by oss-fuzz",
     )
     parser.add_argument(
         "--stop-on",
@@ -79,7 +85,14 @@ def get_parser():
         default=None,
         help="List of approaches to use",
     )
-
+    parser.add_argument(
+        "--functions-denylist",
+        nargs="+",
+        dest="functions_denylist",
+        default=None,
+        help="List of words that should not appear in target function names. "
+        "Such functions will be skipped.",
+    )
     return parser
 
 
@@ -129,14 +142,16 @@ def get_approaches(requested_approaches):
     return approaches
 
 
-def generate_building_fuzz_targets(codebase_dir, git_url, approaches, force=False):
+def generate_building_fuzz_targets(
+    args, codebase_dir, git_url, approaches, force=False
+):
     codebase_name = get_codebase_name(codebase_dir)
     if not force:
         print(f"Checking if {codebase_name} is not already in oss-fuzz")
         if discovery.is_project_to_be_skipped(codebase_dir, git_url):
             yield "message", EXIT_PROJECT_ALREADY_FUZZED
 
-    autofuzz_generator = autofuzz_codebase(codebase_dir, approaches=approaches)
+    autofuzz_generator = autofuzz_codebase(args, codebase_dir, approaches=approaches)
     for result in autofuzz_generator:
         yield result
 
@@ -230,7 +245,7 @@ def process_codebase(args, git_url):
     approaches = get_approaches(args.approaches)
 
     generator = generate_building_fuzz_targets(
-        args.codebase_dir, git_url, approaches, force=args.force
+        args, args.codebase_dir, git_url, approaches, force=args.force
     )
 
     generated_fuzz_targets = []
@@ -352,7 +367,7 @@ def read_codebase_results(codebase_dir):
     return target_results
 
 
-def autofuzz_workspace(codebase_dir, target_name, approaches=[]):
+def autofuzz_workspace(args, codebase_dir, target_name, approaches=[]):
     # identify workspace members
     members = fuzzomatic.tools.utils.read_workspace_members(codebase_dir)
 
@@ -370,6 +385,7 @@ def autofuzz_workspace(codebase_dir, target_name, approaches=[]):
         if os.path.isdir(f) and not is_fuzzed:
             print(f"Retrying with workspace member: {f}")
             generator = autofuzz_codebase(
+                args,
                 f,
                 target_name=target_name,
                 virtual_manifest=True,
@@ -404,6 +420,7 @@ def is_project_building_by_default(codebase_dir):
 
 
 def autofuzz_codebase(
+    args,
     codebase_dir,
     target_name=DEFAULT_TARGET_NAME,
     virtual_manifest=False,
@@ -431,7 +448,7 @@ def autofuzz_codebase(
     if is_workspace:
         # fuzz_target_path, tried_approaches = autofuzz_workspace(
         workspace_generator = autofuzz_workspace(
-            codebase_dir, target_name=target_name, approaches=approaches
+            args, codebase_dir, target_name=target_name, approaches=approaches
         )
         for result in workspace_generator:
             yield result
@@ -456,6 +473,7 @@ def autofuzz_codebase(
                 target_name=target_name,
                 virtual_manifest=virtual_manifest,
                 root_codebase_dir=root_codebase_dir,
+                args=args,
             )
 
             for result in approach_function_generator:

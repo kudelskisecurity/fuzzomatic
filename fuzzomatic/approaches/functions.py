@@ -9,7 +9,11 @@ from fuzzomatic.tools.utils import write_fuzz_target, build_target
 
 
 def try_functions_approach(
-    codebase_dir, target_name=DEFAULT_TARGET_NAME, root_codebase_dir=None, **_kwargs
+    codebase_dir,
+    target_name=DEFAULT_TARGET_NAME,
+    root_codebase_dir=None,
+    args=None,
+    **_kwargs,
 ):
     functions = find_target_functions_via_cargo_doc(
         codebase_dir, root_codebase_dir=root_codebase_dir
@@ -30,7 +34,26 @@ def try_functions_approach(
     max_negative_score_functions = 2
     negative_score_functions = 0
     for f in ordered_functions[:max_functions]:
+        path = f[0]
+        function_name = f[1]
         score = f[3]
+
+        # skip functions matching deny list
+        if args is not None and args.functions_denylist is not None:
+            skip_function = False
+            fully_qualified_function_name = "::".join(path)
+            if len(fully_qualified_function_name) > 0:
+                fully_qualified_function_name += "::"
+            fully_qualified_function_name += function_name
+            for word in args.functions_denylist:
+                if word in fully_qualified_function_name:
+                    skip_function = True
+            if skip_function:
+                print(
+                    f"Skipping function {fully_qualified_function_name} "
+                    f"because of deny list: {args.functions_denylist}"
+                )
+                continue
 
         print("Attempting function:")
         print(f)

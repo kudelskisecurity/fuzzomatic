@@ -6,7 +6,7 @@ import glob
 import os
 import sys
 
-from fuzzomatic.main import get_parser as fuzzomatic_parser
+from fuzzomatic.main import get_parser as fuzzomatic_parser, add_parser_shared_arguments
 from fuzzomatic.main import main as fuzzomatic_main
 
 
@@ -16,25 +16,7 @@ def get_parser():
         usage="Run fuzzomatic on all codebases in the specified directory.",
     )
     parser.add_argument("targets_dir", help="Directory containing codebases to target")
-    parser.add_argument(
-        "--stop-on",
-        dest="stop_on",
-        default="bug",
-        help="Stop on can be one of `building`, `useful` or `bug`. "
-        "`building` means stop when a building fuzz target was generated."
-        "`useful` means stop when a useful fuzz target was generated."
-        "`bug` means stop when a bug is found. ",
-    )
-    parser.add_argument(
-        "--max-fuzz-targets",
-        dest="max_fuzz_targets",
-        type=int,
-        default=1,
-        help="Stop if `max_fuzz_targets` fuzz targets match the "
-        "`stop_on` condition for this code base."
-        "For example, if max_fuzz_targets is 2 and stop_on is bug, "
-        "we will stop as soon as 2 bugs are found.",
-    )
+    parser = add_parser_shared_arguments(parser)
 
     return parser
 
@@ -44,28 +26,28 @@ def get_targets(targets_dir):
     return dirs
 
 
-def run_fuzzomatic(codebase_dir, stop_on, max_fuzz_targets):
+def run_fuzzomatic(codebase_dir, fz_batch_args):
     fparser = fuzzomatic_parser()
     args = fparser.parse_args(["foobar"])
     args.codebase_dir = codebase_dir
 
-    args.stop_on = stop_on
-    args.max_fuzz_targets = max_fuzz_targets
+    # pass arguments from fz-batch down to fz
+    skip_args = ["targets_dir"]
+    for arg_name, arg_value in vars(fz_batch_args).items():
+        if arg_name not in skip_args:
+            setattr(args, arg_name, arg_value)
 
     print()
     print("*" * 80)
     print("Calling fuzzomatic:")
-    print(f"{codebase_dir=}")
-    print(f"{stop_on=}")
-    print(f"{max_fuzz_targets=}")
+    for arg_name, arg_value in vars(args).items():
+        print(f"{arg_name}={arg_value}")
     fuzzomatic_main(args=args)
 
 
 def main():
     parser = get_parser()
     args = parser.parse_args()
-    stop_on = args.stop_on
-    max_fuzz_targets = args.max_fuzz_targets
 
     targets_dir = args.targets_dir
     print(targets_dir)
@@ -82,7 +64,7 @@ def main():
     print("Starting initial run loop")
     for i, t in enumerate(targets):
         print(f"Running fuzzomatic on target {i + 1}/{total_targets}: {t}")
-        run_fuzzomatic(t, stop_on, max_fuzz_targets)
+        run_fuzzomatic(t, args)
 
     very_end = datetime.datetime.utcnow()
     total_duration = very_end - very_start
