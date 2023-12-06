@@ -3,7 +3,9 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-green.svg)](https://docs.python.org/3.11/whatsnew/) [![License: GPL v3](https://img.shields.io/badge/license-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
 
 
-Automatically fuzz Rust projects from scratch
+Automatically fuzz Rust projects from scratch with AI assistance
+
+<img src="https://github.com/kudelskisecurity/fuzzomatic/assets/11460141/0c38ab05-9a42-41a1-b150-390f4810be8a" alt="Fuzzomatic Werewolf" width=50% height=50% />
 
 # Requirements
 
@@ -132,6 +134,9 @@ Usage:
 ```
 poetry run fz-oss-fuzz
 ```
+
+# Project Goals 
+The primary goal of the project is to decrease the effort for developers to get started with fuzzing. For many projects, fuzzing isn’t done because it is viewed as taking too much time or potentially too complex. With Fuzzomatic, we use Large Language Models to assist in the setup and execution of fuzz testing for Rust applications. It's our hope that with continued development and experimentation, more developers will implement fuzzing into their development process and catch more vulnerabilities and issues before they make it into production.     
 
 # License and Copyright
 
