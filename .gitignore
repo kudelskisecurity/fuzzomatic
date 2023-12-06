@@ -10,3 +10,4 @@ settings.yml
 .pytest_cache
 .ruff_cache
 htmlcov
+.DS_Store
