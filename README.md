@@ -7,6 +7,10 @@ Automatically fuzz Rust projects from scratch with AI assistance
 
 <img src="https://github.com/kudelskisecurity/fuzzomatic/assets/11460141/0c38ab05-9a42-41a1-b150-390f4810be8a" alt="Fuzzomatic Werewolf" width=50% height=50% />
 
+Read our introductory blog post here. 
+
+https://research.kudelskisecurity.com/2023/12/07/introducing-fuzzomatic-using-ai-to-automatically-fuzz-rust-projects-from-scratch/ 
+
 # Requirements
 
 * Rust (install using [rustup](https://rustup.rs/))
