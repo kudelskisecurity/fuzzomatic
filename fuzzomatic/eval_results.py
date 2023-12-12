@@ -486,6 +486,7 @@ def main():
                 bug_found = ft["bug_found"]
                 successful_approach = ft["successful_approach"]
                 fuzz_target_code = ft["fuzz_target_code"]
+                fuzz_target_path = ft["fuzz_target_path"]
 
                 show = True
 
@@ -513,6 +514,7 @@ def main():
                     print(f"{name=}")
                     git_url = r["git_url"]
                     print(f"{git_url=}")
+                    print(f"{fuzz_target_path=}")
                     print(f"{successful_approach=}")
                     print(f"{useful=}")
                     print(f"{bug_found=}")
