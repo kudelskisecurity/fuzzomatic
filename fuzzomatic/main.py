@@ -26,7 +26,6 @@ from fuzzomatic.tools.constants import (
     EXIT_PROJECT_DOES_NOT_BUILD,
     EXIT_OPENAI_API_KEY_ERROR,
 )
-from fuzzomatic.tools.llm import ask_llm
 from fuzzomatic.tools.runtime import evaluate_target, cleanup_corpus
 from fuzzomatic.tools.utils import (
     get_codebase_name,
