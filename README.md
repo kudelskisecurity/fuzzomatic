@@ -35,19 +35,20 @@ Install the dependencies:
 poetry install
 ```
 
-Setup your OpenAI API key in `settings.yml`.
-The file `settings.yml.sample` can be copied as an example.
+Setup your OpenAI API settings (key, endpoint, etc.) `settings.env`.
+The file `settings.env.sample` can be copied as an example.
 
 ```
-cp settings.yml.sample settings.yml
+cp settings.env.sample settings.env
 ```
 
-Now edit `settings.yml` and set your API key in there.
+Now edit `settings.env` and set the environment variables in that file according to your environment.
+OpenAI and Azure OpenAI are both supported.
 
-Alternatively, set the `OPENAI_API_KEY` environment variable before running fuzzomatic:
+Before running Fuzzomatic, make sure to source the env file:
 
 ```
-export OPENAI_API_KEY=your_key_goes_here
+source settings.env
 ```
 
 # Usage

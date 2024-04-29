@@ -6,7 +6,7 @@ git
 .terraform
 .terraform*
 terraform*
-settings.yml
+settings.env
 .pytest_cache
 .ruff_cache
 htmlcov

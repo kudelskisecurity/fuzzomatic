@@ -26,7 +26,6 @@ from fuzzomatic.tools.constants import (
     EXIT_PROJECT_DOES_NOT_BUILD,
     EXIT_OPENAI_API_KEY_ERROR,
 )
-from fuzzomatic.tools.llm import ask_llm, reset_ask_llm_counts, load_openai_api_key
 from fuzzomatic.tools.runtime import evaluate_target, cleanup_corpus
 from fuzzomatic.tools.utils import (
     get_codebase_name,
@@ -182,19 +181,25 @@ def ensure_dependencies_available():
             sys.exit(-1)
 
 
-def main(args=None):
-    # reset LLM counter
-    ask_llm.counter = 0
+def ensure_env_vars_set():
+    if "OPENAI_API_KEY" not in os.environ and "AZURE_OPENAI_API_KEY" not in os.environ:
+        print(
+            "[ERROR] Please make sure to setup OpenAI environment variables and source the env file as explained in "
+            "the README"
+        )
+        sys.exit(-1)
 
+
+def main(args=None):
     if args is None:
         parser = get_parser()
         args = parser.parse_args()
 
-    # load openai api key
-    load_openai_api_key()
-
     # check required dependencies are available
     ensure_dependencies_available()
+
+    # check env vars set
+    ensure_env_vars_set()
 
     very_start = datetime.datetime.utcnow()
 
@@ -463,9 +468,6 @@ def autofuzz_codebase(
             print("=" * 40)
             print(f"ATTEMPTING APPROACH: {approach_name}")
             print("=" * 40)
-
-            # reset counts per approach
-            reset_ask_llm_counts()
 
             # attempt approach
             approach_function_generator = approach_function(

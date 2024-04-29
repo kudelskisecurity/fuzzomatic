@@ -4,54 +4,33 @@ import sys
 import time
 
 import openai
-import yaml
 
 import fuzzomatic.tools.utils
 from fuzzomatic.tools.constants import EXIT_OPENAI_API_KEY_ERROR
 
+DEFAULT_CLIENT = "azure_openai"
+OPENAI_CLIENT = os.environ.get("OPENAI_CLIENT", DEFAULT_CLIENT)
 
-def reset_ask_llm_counts():
-    ask_llm.counter = 0
-    ask_llm.prompt_tokens = 0
-    ask_llm.completion_tokens = 0
-    ask_llm.total_tokens = 0
-
-
-def update_tokens(prompt_tokens, completion_tokens, total_tokens):
-    if not hasattr(ask_llm, "prompt_tokens"):
-        ask_llm.prompt_tokens = 0
-    if not hasattr(ask_llm, "completion_tokens"):
-        ask_llm.completion_tokens = 0
-    if not hasattr(ask_llm, "prompt_tokens"):
-        ask_llm.prompt_tokens = 0
-
-    ask_llm.prompt_tokens += prompt_tokens
-    ask_llm.completion_tokens += completion_tokens
-    ask_llm.total_tokens += total_tokens
+if OPENAI_CLIENT == "azure_openai":
+    DEFAULT_MODEL = os.environ.get("AZURE_OPENAI_MODEL")
+    DEFAULT_MODEL_LONG = os.environ.get("AZURE_OPENAI_MODEL_LONG")
+else:
+    DEFAULT_MODEL = os.environ.get("OPENAI_MODEL")
+    DEFAULT_MODEL_LONG = os.environ.get("OPENAI_MODEL_LONG")
 
 
 def ask_llm(
     prompt,
-    model="gpt-3.5-turbo",
-    long_model="gpt-3.5-turbo-16k",
+    model=DEFAULT_MODEL,
+    long_model=DEFAULT_MODEL_LONG,
     long_model_retry=True,
     retry=2,
 ):
     print("Asking LLM...")
-    # Make a request to the API to generate text
-    messages = [{"role": "user", "content": prompt}]
 
     try:
-        if not hasattr(ask_llm, "counter"):
-            ask_llm.counter = 0
-        ask_llm.counter += 1
-        response = openai.ChatCompletion.create(
-            model=model,
-            messages=messages,
-            temperature=0,
-            timeout=35,
-        )
-    except openai.error.InvalidRequestError:
+        response = get_llm_response_raw(model, prompt)
+    except openai.BadRequestError:
         if long_model_retry:
             print("LLM call failed")
             print(f"Retrying with model {long_model}")
@@ -60,13 +39,13 @@ def ask_llm(
             )
         else:
             return None
-    except openai.error.Timeout:
+    except openai.APITimeoutError:
         print("LLM call timeout")
         if retry > 0:
             print("Retrying...")
             return ask_llm(prompt, model=model, long_model=long_model, retry=retry - 1)
         return None
-    except openai.error.RateLimitError as e:
+    except openai.RateLimitError as e:
         print("OpenAI API rate limit reached")
         print(e)
         sleep_seconds = 60
@@ -80,7 +59,7 @@ def ask_llm(
             long_model_retry=long_model_retry,
             retry=retry,
         )
-    except openai.error.ServiceUnavailableError as e:
+    except openai.ServiceUnavailableError as e:
         print("OpenAI service unavailable")
         print(e)
         sleep_seconds = 60
@@ -94,7 +73,7 @@ def ask_llm(
             long_model_retry=long_model_retry,
             retry=retry,
         )
-    except openai.error.APIError as e:
+    except openai.APIError as e:
         print("OpenAI API Error")
         print(e)
         sleep_seconds = 60
@@ -108,22 +87,31 @@ def ask_llm(
             long_model_retry=long_model_retry,
             retry=retry,
         )
-    except openai.error.AuthenticationError as e:
+    except openai.AuthenticationError as e:
         print("OpenAI authentication error. Is the OpenAI API key set and correct?")
         print(e)
         sys.exit(EXIT_OPENAI_API_KEY_ERROR)
-
-    # extract usage information (tokens in/out)
-    usage = response.usage
-    prompt_tokens = usage.prompt_tokens
-    completion_tokens = usage.completion_tokens
-    total_tokens = usage.total_tokens
-    update_tokens(prompt_tokens, completion_tokens, total_tokens)
 
     # Extract the generated text from the API response
     generated_text = response.choices[0].message.content
     print("Got LLM response.")
     return generated_text
+
+
+def get_llm_response_raw(model, prompt, timeout=35, temperature=0):
+    if OPENAI_CLIENT == "azure_openai":
+        client = openai.AzureOpenAI()  # use Azure OpenAI client
+    else:
+        client = openai.OpenAI()  # use OpenAI client
+
+    messages = [{"role": "user", "content": prompt}]
+    response = client.chat.completions.create(
+        messages=messages,
+        model=model,
+        temperature=temperature,
+        timeout=timeout,
+    )
+    return response
 
 
 def extract_fuzz_target(response, codebase_dir):
@@ -195,40 +183,3 @@ def get_available_models():
 
     model_names = sorted(model_names)
     return model_names
-
-
-def load_openai_api_key():
-    varname = "OPENAI_API_KEY"
-    if varname in os.environ:
-        # environment variable is set, nothing to do
-        print("API key is set in env var")
-    else:
-        # env var not set, try to load from settings file
-        here = os.path.dirname(os.path.realpath(__file__))
-        project_root = os.path.join(here, os.pardir, os.pardir)
-        settings_filename = "settings.yml"
-        settings_path = os.path.join(project_root, settings_filename)
-        error_message = (
-            f"OpenAI API key not set. "
-            f"Please set it in {settings_filename} "
-            f"or set the {varname} environment variable."
-        )
-        if not os.path.exists(settings_path):
-            sys.exit(error_message)
-        else:
-            with open(settings_path) as f:
-                blob = yaml.safe_load(f)
-                found = False
-                if "settings" in blob:
-                    settings = blob["settings"]
-                    if "openai_api_key" in settings:
-                        found = True
-                        openai_api_key = settings["openai_api_key"]
-                        print("setting openai.api_key")
-                        openai.api_key = openai_api_key
-
-                        # check that all is good with this key
-                        _models = get_available_models()
-
-                if not found:
-                    sys.exit(error_message)
