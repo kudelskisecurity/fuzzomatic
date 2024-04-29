@@ -7,13 +7,12 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-openai = "^0.28.0"
+openai = "1.23.6"
 jinja2 = "^3.1.2"
 pytest = "^7.4.2"
 coverage = "^7.3.1"
 requests = "^2.31.0"
 toml = "^0.10.2"
-pyyaml = "^6.0.1"
 
 [tool.poetry.scripts]
 fz = "fuzzomatic.main:main"
@@ -30,3 +29,4 @@ build-backend = "poetry.core.masonry.api"
 [tool.ruff.per-file-ignores]
 "__init__.py" = ["F401"]
 "tests/test_readme.py" = ["E501"]
+
