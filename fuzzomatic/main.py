@@ -92,6 +92,14 @@ def add_parser_shared_arguments(parser):
         help="List of words that should not appear in target function names. "
         "Such functions will be skipped.",
     )
+    parser.add_argument(
+        "--workspace-members-allowlist",
+        nargs="+",
+        dest="workspace_members_allowlist",
+        default=None,
+        help="List of workspace members to process. "
+        "Unspecified workspace members will be skipped.",
+    )
     return parser
 
 
@@ -376,6 +384,13 @@ def autofuzz_workspace(args, codebase_dir, target_name, approaches=[]):
     # identify workspace members
     members = fuzzomatic.tools.utils.read_workspace_members(codebase_dir)
 
+    if args.workspace_members_allowlist is not None:
+        final_members = []
+        for member in members:
+            if any([member.endswith(m) for m in args.workspace_members_allowlist]):
+                final_members.append(member)
+        members = final_members
+
     print("About to autofuzz workspace members:")
     for m in members:
         print(m)
@@ -451,7 +466,6 @@ def autofuzz_codebase(
             yield "message", EXIT_PROJECT_DOES_NOT_BUILD
 
     if is_workspace:
-        # fuzz_target_path, tried_approaches = autofuzz_workspace(
         workspace_generator = autofuzz_workspace(
             args, codebase_dir, target_name=target_name, approaches=approaches
         )
