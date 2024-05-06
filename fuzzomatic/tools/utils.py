@@ -426,5 +426,8 @@ def add_parent_dependencies(codebase_dir, root_codebase_dir):
     if not empty_dependencies and os.path.exists(fuzz_cargo_path):
         fuzz_cargo = load_toml(fuzz_cargo_path)
         fuzz_cargo["dependencies"].update(parent_dependencies)
+        fuzz_cargo["workspace"] = {
+            "members": []
+        }  # to avoid "current package believes it's in a workspace" error
         print("Writing new fuzz Cargo.toml")
         write_toml(fuzz_cargo_path, fuzz_cargo)
